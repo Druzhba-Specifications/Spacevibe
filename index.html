@@ -1,247 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SpaceVibe (admin+md5+firebase)</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SpaceVibe — fake verification + hashed email</title>
 
-    <!-- md5 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+<!-- md5 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+<!-- firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-    <!-- firebase compat (same as your previous file) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-    <style>
-        /* --- existing styles lightly adjusted --- */
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family: Arial, Helvetica, sans-serif; background: #1a1a2e; min-height:100vh; color:#fff; }
-        .splash-page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; background: linear-gradient(to bottom right, #0f3460, #16213e, #1a1a2e); }
-        .splash-container { max-width:900px; width:100%; }
-        .logo { text-align:center; margin-bottom:40px; }
-        .logo h1 { font-size:56px; color:#00d9ff; margin-bottom:8px; font-weight:900; letter-spacing:-2px; }
-        .logo p { color:#8b8b8b; font-size:16px; }
-        .auth-grid { display:grid; grid-template-columns:1fr 1fr; gap:28px; }
-        .auth-box { background:#16213e; border-radius:12px; padding:28px; border:1px solid #2a2a4e; }
-        .auth-box h2 { font-size:22px; margin-bottom:16px; color:#fff; }
-        input[type="text"], input[type="password"], textarea { width:100%; padding:12px; background:#0f3460; border:1px solid #2a2a4e; border-radius:8px; color:#fff; font-size:14px; margin-bottom:12px; }
-        .btn { width:100%; padding:12px; background:#00d9ff; color:#0f3460; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; }
-        .btn:hover { background:#00b8d4; }
-        .app-container { display:none; min-height:100vh; background:#0f0f1e; }
-
-        .topbar { background:#16213e; padding:12px 20px; border-bottom:1px solid #2a2a4e; position:sticky; top:0; z-index:200; }
-        .topbar-inner { max-width:1100px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; gap:12px; }
-        .topbar h1 { color:#00d9ff; font-size:22px; font-weight:900; }
-        .tabs { display:flex; gap:8px; align-items:center; }
-        .tab { background:transparent; border:none; color:#8b8b8b; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:14px; }
-        .tab:hover { background:#0f3460; color:#fff; }
-        .tab.active { background:#00d9ff; color:#0f3460; font-weight:700; }
-
-        #adminBar { display:none; background:#13203a; padding:8px 12px; border-top:1px solid #21324f; border-bottom:1px solid #21324f; }
-        #adminBar .admin-btn { margin-right:8px; padding:8px 10px; border-radius:8px; border:none; background:#00d9ff; color:#031026; font-weight:700; cursor:pointer; }
-
-        .content { max-width:1100px; margin:18px auto; padding:20px; }
-        .page { display:none; }
-        .page.active { display:block; }
-
-        .composer, .post, .reel-create, .profile, .contacts, .chat, .reel-frame { background:#16213e; border-radius:10px; padding:18px; border:1px solid #2a2a4e; }
-
-        .composer textarea { min-height:80px; margin-bottom:12px; }
-        .post { margin-bottom:14px; }
-        .post-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-        .pfp { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#00d9ff,#667eea); display:flex; align-items:center; justify-content:center; font-weight:700; margin-right:8px; font-size:18px; }
-        .post-author { font-weight:700; font-size:15px; }
-        .post-time { font-size:13px; color:#8b8b8b; margin-top:2px; }
-        .post-text { margin:12px 0; line-height:1.5; font-size:15px; }
-        .post-actions { display:flex; gap:14px; padding-top:10px; border-top:1px solid #2a2a4e; }
-
-        .action-btn { background:none; border:none; color:#8b8b8b; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:8px; }
-        .action-btn:hover { color:#00d9ff; }
-        .action-btn.active { color:#ff0080; }
-
-        .msg-layout { display:grid; grid-template-columns:280px 1fr; gap:12px; height:calc(100vh - 160px); }
-        .contacts { overflow-y:auto; }
-        .contact { padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:10px; }
-        .contact:hover { background:#0f3460; }
-        .contact.active { background:#00d9ff; color:#0f0f26; }
-
-        .chat { display:flex; flex-direction:column; }
-        .chat-header { padding:12px; border-bottom:1px solid #2a2a4e; font-weight:700; }
-        .chat-msgs { flex:1; padding:12px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
-        .msg { max-width:65%; padding:10px 12px; border-radius:14px; font-size:15px; line-height:1.4; }
-        .msg.me { align-self:flex-end; background:#00d9ff; color:#0f3460; border-bottom-right-radius:4px; }
-        .msg.them { align-self:flex-start; background:#0f3460; }
-
-        .chat-input { padding:12px; border-top:1px solid #2a2a4e; display:flex; gap:10px; }
-        .chat-input input { flex:1; padding:10px; border-radius:8px; border:1px solid #2a2a4e; background:#0f3460; color:#fff; }
-
-        .profile-top { display:flex; align-items:center; gap:18px; margin-bottom:12px; }
-        .stats { display:flex; gap:22px; margin-top:12px; }
-
-        .admin-panel, .takedown-panel { display:none; background:#0f233f; border:1px solid #21324f; padding:12px; border-radius:8px; margin-bottom:12px; }
-        .panel-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px dashed #23324f; }
-        .panel-row:last-child { border-bottom:none; }
-
-        @media (max-width:768px) {
-            .auth-grid { grid-template-columns:1fr; }
-            .msg-layout { grid-template-columns:1fr; height:auto; }
-            .contacts { display:none; }
-            .logo h1 { font-size:48px; }
-        }
-    </style>
+<style>
+  /* compact styles (kept similar to earlier) */
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:#111827;color:#fff;min-height:100vh}
+  .center{max-width:1100px;margin:18px auto;padding:16px}
+  .splash{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(120deg,#0b1221,#0f1724)}
+  .card{background:#0f1724;border:1px solid #1f2937;border-radius:10px;padding:18px}
+  h1{color:#00d9ff;font-weight:900;margin-bottom:8px}
+  input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #24303f;background:#061226;color:#fff;margin-bottom:8px}
+  .btn{background:#00d9ff;color:#022032;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:700}
+  .topbar{background:#0b1221;padding:10px 16px;border-bottom:1px solid #18202b;position:sticky;top:0;z-index:50}
+  .tabs{display:flex;gap:8px;align-items:center}
+  .tab{background:transparent;border:none;color:#94a3b8;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .tab.active{background:#00d9ff;color:#022032;font-weight:700}
+  .layout{display:flex;gap:16px;margin-top:16px}
+  .col{flex:1}
+  .sidebar{width:300px}
+  .pfp{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#00d9ff,#667eea);font-weight:900;margin-right:10px}
+  .post{background:#0b1520;border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid #172433}
+  .post-top{display:flex;align-items:center}
+  .post-text{margin-top:10px;line-height:1.4}
+  .post-actions{display:flex;gap:10px;margin-top:10px}
+  .action-btn{background:none;border:none;color:#9fb3c8;cursor:pointer}
+  .comment{background:#071226;padding:8px;border-radius:8px;margin-top:8px;border:1px solid #14242f}
+  .contacts{background:#071226;padding:8px;border-radius:8px;border:1px solid #14242f}
+  .admin-bar{display:none;background:#07122a;padding:10px;border-top:1px solid #122033}
+  .badge{color:#00d9ff;font-weight:800;margin-left:6px}
+  .small{font-size:12px;color:#94a3b8}
+  .panel{background:#071226;padding:10px;border-radius:8px;border:1px solid #122033;margin-bottom:10px}
+  @media (max-width:900px){.layout{flex-direction:column}.sidebar{width:100%}}
+</style>
 </head>
 <body>
-    <div id="splash" class="splash-page">
-        <div class="splash-container">
-            <div class="logo">
-                <h1>SpaceVibe</h1>
-                <p>your corner of the internet</p>
-            </div>
 
-            <div class="auth-grid">
-                <div class="auth-box">
-                    <h2>sign up</h2>
-                    <form id="signupForm">
-                        <input type="text" id="signupUser" placeholder="username" required />
-                        <input type="password" id="signupPass" placeholder="password" required />
-                        <textarea id="signupBio" placeholder="about you..."></textarea>
-                        <button type="submit" class="btn">create account</button>
-                    </form>
-                </div>
-
-                <div class="auth-box">
-                    <h2>log in</h2>
-                    <form id="loginForm">
-                        <input type="text" id="loginUser" placeholder="username" required />
-                        <input type="password" id="loginPass" placeholder="password" required />
-                        <button type="submit" class="btn">enter</button>
-                    </form>
-                </div>
-            </div>
+<!-- Splash / Auth -->
+<div id="splash" class="splash">
+  <div class="center">
+    <div class="card">
+      <h1>SpaceVibe</h1>
+      <p class="small">your corner of the internet — fake verification (hashed email)</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div>
+          <h3 style="margin-bottom:6px">Sign up</h3>
+          <form id="signupForm">
+            <input id="signupUser" placeholder="username" required />
+            <input id="signupEmail" placeholder="email (or put 'alexsentme' to auto-verify)" />
+            <input id="signupPass" type="password" placeholder="password" required />
+            <textarea id="signupBio" placeholder="about you..." rows="3"></textarea>
+            <button class="btn" type="submit">Create account</button>
+          </form>
         </div>
+        <div>
+          <h3 style="margin-bottom:6px">Log in</h3>
+          <form id="loginForm">
+            <input id="loginUser" placeholder="username" required />
+            <input id="loginPass" type="password" placeholder="password" required />
+            <button class="btn" type="submit">Enter</button>
+          </form>
+        </div>
+      </div>
+      <div style="margin-top:12px" class="small">
+        Note: Emails are not actually emailed. We store <b>md5(email)</b>. Using email value <code>alexsentme</code> sets emailVerified = true.
+      </div>
     </div>
+  </div>
+</div>
 
-    <div id="app" class="app-container">
-        <div class="topbar">
-            <div class="topbar-inner">
-                <h1>SpaceVibe</h1>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <div class="tabs">
-                        <button class="tab active" data-page="feed">feed</button>
-                        <button class="tab" data-page="reels">reels</button>
-                        <button class="tab" data-page="messages">messages</button>
-                        <button class="tab" data-page="profile">profile</button>
-                        <button class="tab" id="logout">logout</button>
-                    </div>
-                    <div id="currentUserDisplay" style="margin-left:8px;color:#8b8b8b;font-weight:700;"></div>
-                </div>
-            </div>
-
-            <!-- internal admin bar -->
-            <div id="adminBar">
-                <button class="admin-btn" id="openAdminPanelBtn">Admin Panel</button>
-                <button class="admin-btn" id="openTakedownInboxBtn">Takedown Inbox</button>
-            </div>
+<!-- App -->
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="center" style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;align-items:center;gap:12px">
+        <h1 style="margin:0">SpaceVibe</h1>
+        <div class="tabs" id="mainTabs">
+          <button class="tab active" data-page="feed">Feed</button>
+          <button class="tab" data-page="reels">Reels</button>
+          <button class="tab" data-page="messages">Messages</button>
+          <button class="tab" data-page="profile">Profile</button>
         </div>
-
-        <div class="content">
-            <!-- admin panel UI (hidden until opened) -->
-            <div id="adminPanel" class="admin-panel"></div>
-            <div id="takedownPanel" class="takedown-panel"></div>
-
-            <div id="feed" class="page active">
-                <div class="composer">
-                    <textarea id="postText" placeholder="what's happening?"></textarea>
-                    <button class="btn" id="postBtn">post</button>
-                </div>
-                <div id="posts"></div>
-            </div>
-
-            <div id="reels" class="page">
-                <div class="reel-create">
-                    <input type="text" id="reelUrl" placeholder="video url (optional)" />
-                    <textarea id="reelCaption" placeholder="caption..."></textarea>
-                    <button class="btn" id="reelBtn">post reel</button>
-                </div>
-                <div class="reel-viewer-wrap">
-                    <div class="reel-box">
-                        <div class="reel-frame" id="reelView">
-                            <div class="reel-placeholder">no reels yet</div>
-                        </div>
-                        <div class="reel-nav" style="display:flex;justify-content:center;gap:12px;margin-top:12px;">
-                            <button id="prevReel">← prev</button>
-                            <button id="nextReel">next →</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="messages" class="page">
-                <div class="msg-layout">
-                    <div class="contacts">
-                        <h3>people</h3>
-                        <div id="contactList"></div>
-                    </div>
-                    <div class="chat">
-                        <div class="chat-header" id="chatHead">pick someone to chat</div>
-                        <div class="chat-msgs" id="chatBox"></div>
-                        <div class="chat-input">
-                            <input type="text" id="msgInput" placeholder="message..." />
-                            <button class="send-btn" id="sendBtn">send</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="profile" class="page">
-                <div class="profile">
-                    <div class="profile-top">
-                        <div class="pfp" id="profPfp"></div>
-                        <div>
-                            <h2 id="profName"></h2>
-                            <div id="profBadge" style="margin-top:6px;"></div>
-                        </div>
-                    </div>
-                    <div class="profile-bio" id="profBio"></div>
-                    <div class="stats">
-                        <div class="stat">
-                            <div class="stat-num" id="postStat">0</div>
-                            <div class="stat-label">posts</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-num" id="reelStat">0</div>
-                            <div class="stat-label">reels</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="currentUserDisplay" class="small"></div>
+        <button class="btn" id="logout">Logout</button>
+      </div>
     </div>
+    <div id="adminBar" class="admin-bar center">
+      <button class="btn" id="openAdminPanelBtn">Admin Panel</button>
+      <button class="btn" id="openTakedownInboxBtn">Takedown Inbox</button>
+    </div>
+  </div>
+
+  <div class="center">
+    <div id="adminPanel" class="panel" style="display:none"></div>
+    <div id="takedownPanel" class="panel" style="display:none"></div>
+
+    <div class="layout">
+      <div class="col">
+        <!-- Feed -->
+        <div id="feedPage" class="page">
+          <div class="panel">
+            <textarea id="postText" placeholder="What's happening?" rows="3"></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn" id="postBtn">Post</button>
+              <button class="btn" id="createReelQuick">Post Reel</button>
+            </div>
+          </div>
+          <div id="posts"></div>
+        </div>
+
+        <!-- Reels -->
+        <div id="reelsPage" class="page" style="display:none">
+          <div class="panel">
+            <input id="reelUrl" placeholder="video url (optional)"/>
+            <textarea id="reelCaption" placeholder="caption..." rows="2"></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn" id="reelBtn">Post Reel</button>
+            </div>
+          </div>
+          <div id="reels"></div>
+        </div>
+
+        <!-- Messages -->
+        <div id="messagesPage" class="page" style="display:none">
+          <div class="layout" style="gap:8px">
+            <div class="sidebar">
+              <div class="contacts card">
+                <h4>People</h4>
+                <div id="contactList"></div>
+              </div>
+            </div>
+            <div style="flex:1">
+              <div class="card">
+                <div id="chatHead" class="small">pick someone to chat</div>
+                <div id="chatBox" style="height:320px;overflow:auto;margin-top:8px"></div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <input id="msgInput" placeholder="Message..." />
+                  <button class="btn" id="sendBtn">Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile -->
+        <div id="profilePage" class="page" style="display:none">
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="pfp" id="profPfp"></div>
+              <div>
+                <div id="profName"></div>
+                <div id="profBadge" class="small"></div>
+                <div id="profBio" class="small" style="margin-top:6px"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:12px">
+              <div class="small">Posts: <span id="postStat">0</span></div>
+              <div class="small">Reels: <span id="reelStat">0</span></div>
+              <div class="small">Followers: <span id="followersStat">0</span></div>
+              <div class="small">Following: <span id="followingStat">0</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="sidebar">
+        <div class="panel">
+          <h4>Quick actions</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <button class="btn" id="openMyProfile">My Profile</button>
+            <button class="btn" id="openFeed">Feed</button>
+          </div>
+        </div>
+
+        <div class="panel" id="notificationsPanel">
+          <h4>Notifications</h4>
+          <div id="notificationsList" class="small"></div>
+        </div>
+
+        <div class="panel">
+          <h4>Admin Audit</h4>
+          <div id="auditList" class="small"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-/* -----------------------------
-   Firebase config (your values)
-   ----------------------------- */
+/* --------------------------
+   Firebase config — replace if needed
+   -------------------------- */
 const firebaseConfig = {
-    apiKey: "AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
-    authDomain: "spacevibe-backend.firebaseapp.com",
-    projectId: "spacevibe-backend",
-    storageBucket: "spacevibe-backend.firebasestorage.app",
-    messagingSenderId: "258209625594",
-    appId: "1:258209625594:web:a21c48b7e7100462012043"
+  apiKey: "AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
+  authDomain: "spacevibe-backend.firebaseapp.com",
+  projectId: "spacevibe-backend",
+  storageBucket: "spacevibe-backend.firebasestorage.app",
+  messagingSenderId: "258209625594",
+  appId: "1:258209625594:web:a21c48b7e7100462012043"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* -----------------------------
+/* --------------------------
    Roles & state
-   ----------------------------- */
+   -------------------------- */
 const ROLE = {
-    FULL_ADMIN: "full-admin",
-    ADMIN: "admin",
-    CERTIFIED: "certified",
-    REGULAR: "regular"
+  FULL_ADMIN: "full-admin",
+  ADMIN: "admin",
+  CERTIFIED: "certified",
+  REGULAR: "regular"
 };
 
 let user = null;
@@ -252,603 +232,595 @@ let allMsgs = [];
 let reelIdx = 0;
 let chatWith = null;
 
-/* -----------------------------
-   Load app
-   ----------------------------- */
-function load() {
-    // load saved session username
-    const saved = JSON.parse(localStorage.getItem('user') || 'null');
-    if (saved && saved.username) {
-        // fetch up-to-date user object from firebase
-        db.ref('users/' + saved.username).once('value').then(snap => {
-            if (snap.exists()) {
-                user = snap.val();
-                localStorage.setItem('user', JSON.stringify(user));
-                showApp();
-                loadFromFirebase();
-            } else {
-                // session broken
-                localStorage.removeItem('user');
-            }
-        });
-    }
-}
-load();
-
-/* -----------------------------
-   Realtime listeners for data
-   ----------------------------- */
-function loadFromFirebase() {
-    // Users
-    db.ref('users').on('value', (snap) => {
-        allUsers = snap.val() || {};
-        ensureAlex();
-        renderContacts();
-        renderProfile();
-        renderPosts(); // badges
-        renderReels();
-        renderAdminPanel();
-    });
-
-    // Posts
-    db.ref('posts').on('value', (snap) => {
-        const data = snap.val() || {};
-        // convert object to array, preserving id keys
-        allPosts = Object.keys(data || {}).map(k => {
-            const p = data[k];
-            p.id = k;
-            // normalize likes
-            p.likes = Array.isArray(p.likes) ? p.likes : (p.likes ? Object.values(p.likes) : []);
-            return p;
-        }).sort((a,b) => b.time - a.time);
-        renderPosts();
-    });
-
-    // Reels
-    db.ref('reels').on('value', (snap) => {
-        const data = snap.val() || {};
-        allReels = Object.keys(data || {}).map(k => {
-            const r = data[k];
-            r.id = k;
-            r.likes = Array.isArray(r.likes) ? r.likes : (r.likes ? Object.values(r.likes) : []);
-            return r;
-        }).sort((a,b) => b.time - a.time);
-        if (reelIdx >= allReels.length) reelIdx = Math.max(0, allReels.length - 1);
-        renderReels();
-    });
-
-    // Messages
-    db.ref('messages').on('value', (snap) => {
-        const data = snap.val() || {};
-        allMsgs = Object.keys(data || {}).map(k => {
-            const m = data[k];
-            m.id = k;
-            return m;
-        }).sort((a,b) => a.time - b.time);
-        renderChat();
-        renderContacts(); // ensure unread or last message order if you want in future
-    });
-
-    // Takedowns (for full-admin inbox UI)
-    db.ref('takedowns').on('value', (snap) => {
-        renderTakedownPanel();
-    });
-}
-
-/* -----------------------------
+/* --------------------------
    Helpers
-   ----------------------------- */
-function saveLocalUser() {
-    if (user) localStorage.setItem('user', JSON.stringify(user));
+   -------------------------- */
+function md5v(s){ try { return md5(String(s)); } catch(e){ return String(s); } }
+function now(){ return Date.now(); }
+function escapeHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function logAudit(action, details){
+  const id = Date.now().toString() + Math.random().toString(36).slice(2,8);
+  db.ref('audit/' + id).set({id, by: user ? user.username : 'anon', action, details, time: now()});
 }
 
-function ensureAlex() {
-    // ensure alexmaxxing exists and is full-admin & certified
-    if (!allUsers["alexmaxxing"]) {
-        const alex = {
-            username: "alexmaxxing",
-            password: md5("password123"), // placeholder — encourage changing
-            bio: "primary full admin",
-            joined: Date.now(),
-            role: ROLE.FULL_ADMIN,
-            certified: true
-        };
-        db.ref('users/alexmaxxing').set(alex);
-        return;
-    }
-    // if exists but not full-admin, promote (idempotent)
-    const a = allUsers["alexmaxxing"];
-    if (a.role !== ROLE.FULL_ADMIN || !a.certified) {
-        db.ref('users/alexmaxxing/role').set(ROLE.FULL_ADMIN);
-        db.ref('users/alexmaxxing/certified').set(true);
-    }
+/* --------------------------
+   Load saved session (username)
+   -------------------------- */
+function loadSession(){
+  const saved = JSON.parse(localStorage.getItem('user') || 'null');
+  if(saved && saved.username){
+    db.ref('users/' + saved.username).once('value').then(snap => {
+      if(snap.exists()){
+        user = snap.val();
+        localStorage.setItem('user', JSON.stringify(user));
+        showApp();
+        attachListeners();
+        startListeners();
+      } else {
+        localStorage.removeItem('user');
+      }
+    });
+  }
+}
+loadSession();
+
+/* --------------------------
+   Start realtime listeners
+   -------------------------- */
+function startListeners(){
+  db.ref('users').on('value', snap => {
+    allUsers = snap.val() || {};
+    ensureAlex();
+    renderContacts();
+    renderProfile();
+    renderAdminPanel();
+    renderPosts();
+    renderReels();
+    renderAudit();
+  });
+
+  db.ref('posts').on('value', snap => {
+    const data = snap.val() || {};
+    allPosts = Object.keys(data).map(k => {
+      const p = data[k]; p.id = k; p.likes = p.likes || []; p.shares = p.shares || 0; p.comments = p.comments || {}; return p;
+    }).sort((a,b)=>b.time-a.time);
+    renderPosts();
+    renderProfile();
+  });
+
+  db.ref('reels').on('value', snap => {
+    const data = snap.val() || {};
+    allReels = Object.keys(data).map(k=>{const r=data[k]; r.id=k; r.likes=r.likes||[]; return r;}).sort((a,b)=>b.time-a.time);
+    renderReels();
+    renderProfile();
+  });
+
+  db.ref('messages').on('value', snap => {
+    const data = snap.val() || {};
+    allMsgs = Object.keys(data).map(k=>{const m=data[k]; m.id=k; return m;}).sort((a,b)=>a.time-b.time);
+    renderChat();
+  });
+
+  db.ref('takedowns').on('value', snap=>{
+    renderTakedownPanel(); // update inbox
+  });
+
+  db.ref('audit').limitToLast(50).on('value', snap=>{
+    renderAudit();
+  });
 }
 
-/* -----------------------------
-   Signup / Login
-   ----------------------------- */
-document.getElementById('signupForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const u = document.getElementById('signupUser').value.trim();
-    const p = document.getElementById('signupPass').value;
-    const b = document.getElementById('signupBio').value.trim();
-
-    if (!u || !p) return alert('username & password required');
-
-    const snap = await db.ref('users/' + u).once('value');
-    if (snap.exists()) return alert('username taken');
-
-    const newUser = {
-        username: u,
-        password: md5(p),
-        bio: b,
-        joined: Date.now(),
-        role: ROLE.REGULAR,
-        certified: false
+/* --------------------------
+   Ensure alexmaxxing exists and is full-admin
+   -------------------------- */
+function ensureAlex(){
+  if(!allUsers['alexmaxxing']){
+    const u = {
+      username: 'alexmaxxing',
+      password: md5v('password123'),
+      emailHash: md5v('alex@local'),
+      emailVerified: true,
+      bio: 'primary full admin',
+      joined: now(),
+      role: ROLE.FULL_ADMIN,
+      certified: true,
+      followers: [],
+      following: []
     };
+    db.ref('users/alexmaxxing').set(u);
+    logAudit('create_user','auto-created alexmaxxing');
+    return;
+  }
+  // enforce full-admin cert for alex
+  const a = allUsers['alexmaxxing'];
+  if(a.role !== ROLE.FULL_ADMIN || !a.certified){
+    db.ref('users/alexmaxxing/role').set(ROLE.FULL_ADMIN);
+    db.ref('users/alexmaxxing/certified').set(true);
+  }
+}
 
-    await db.ref('users/' + u).set(newUser);
-    user = newUser;
-    saveLocalUser();
-    showApp();
-    loadFromFirebase();
+/* --------------------------
+   Auth (custom fake verification)
+   -------------------------- */
+document.getElementById('signupForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('signupUser').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const pass = document.getElementById('signupPass').value;
+  const bio = document.getElementById('signupBio').value.trim();
+
+  if(!username || !pass) return alert('username & password required');
+
+  const snap = await db.ref('users/' + username).once('value');
+  if(snap.exists()) return alert('username taken');
+
+  const emailHash = md5v(email || '');
+  const emailVerified = (email === 'alexsentme');
+
+  const newUser = {
+    username,
+    password: md5v(pass),
+    emailHash,
+    emailVerified,
+    bio,
+    joined: now(),
+    role: ROLE.REGULAR,
+    certified: false,
+    followers: [],
+    following: []
+  };
+
+  await db.ref('users/' + username).set(newUser);
+  user = newUser;
+  localStorage.setItem('user', JSON.stringify(user));
+  logAudit('signup', 'user:' + username);
+  showApp();
+  startListeners();
 };
 
 document.getElementById('loginForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const u = document.getElementById('loginUser').value.trim();
-    const p = document.getElementById('loginPass').value;
+  e.preventDefault();
+  const username = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(!username || !pass) return;
 
-    const snap = await db.ref('users/' + u).once('value');
-    if (snap.exists() && snap.val().password === md5(p)) {
-        user = snap.val();
-        saveLocalUser();
-        showApp();
-        loadFromFirebase();
-    } else {
-        alert('wrong username or password');
-    }
+  const snap = await db.ref('users/' + username).once('value');
+  if(snap.exists() && snap.val().password === md5v(pass)){
+    user = snap.val();
+    localStorage.setItem('user', JSON.stringify(user));
+    logAudit('login','user:'+username);
+    showApp();
+    startListeners();
+  } else {
+    alert('wrong username or password');
+  }
 };
 
-document.getElementById('logout').onclick = () => {
-    user = null;
-    localStorage.removeItem('user');
-    document.getElementById('splash').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
+document.getElementById('logout').onclick = ()=>{
+  logAudit('logout','user:' + (user?user.username:'anon'));
+  user = null; localStorage.removeItem('user');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('splash').style.display = 'flex';
 };
 
-/* -----------------------------
-   Show app + UI toggles
-   ----------------------------- */
-function showApp() {
-    document.getElementById('splash').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('currentUserDisplay').textContent = user ? '@' + user.username : '';
-    renderPosts();
-    renderReels();
-    renderContacts();
-    renderProfile();
-    updateAdminBar();
+/* --------------------------
+   UI show
+   -------------------------- */
+function showApp(){
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('currentUserDisplay').textContent = user ? '@'+user.username : '';
+  updateAdminBar();
+  renderProfile();
+  renderNotifications();
 }
 
-/* tabs */
-document.querySelectorAll('.tab[data-page]').forEach(t => {
-    t.onclick = () => {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(t.dataset.page).classList.add('active');
-        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-        t.classList.add('active');
-    };
+/* Tabs */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+    const page = (t.dataset.page||'feed') + 'Page';
+    document.getElementById(page).style.display = 'block';
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    t.classList.add('active');
+  };
 });
 
-/* -----------------------------
-   POSTS (Firebase writes)
-   ----------------------------- */
-document.getElementById('postBtn').onclick = async () => {
-    const txt = document.getElementById('postText').value.trim();
-    if (!txt || !user) return;
-    const id = Date.now().toString();
-    const post = {
-        id,
-        user: user.username,
-        text: txt,
-        likes: [],
-        time: Date.now()
-    };
-    await db.ref('posts/' + id).set(post);
-    document.getElementById('postText').value = '';
+/* --------------------------
+   Posts (create/read/like/comment/share)
+   -------------------------- */
+document.getElementById('postBtn').onclick = async ()=>{
+  if(!user) return alert('log in');
+  const text = document.getElementById('postText').value.trim();
+  if(!text) return;
+  const id = now().toString();
+  const post = { id, user: user.username, text, likes: [], shares: 0, time: now(), comments: {} };
+  await db.ref('posts/' + id).set(post);
+  document.getElementById('postText').value = '';
+  logAudit('create_post','post:' + id + ' by ' + user.username);
 };
 
-/* render posts */
-function renderPosts() {
-    const box = document.getElementById('posts');
-    box.innerHTML = '';
-    allPosts.forEach(p => {
-        const liked = (p.likes || []).includes(user?.username);
-        const badge = renderBadge(p.user);
-        const dom = document.createElement('div');
-        dom.className = 'post';
-        dom.innerHTML = `
-            <div class="post-top">
-                <div class="pfp">${p.user[0].toUpperCase()}</div>
-                <div>
-                    <div class="post-author">${p.user} ${badge}</div>
-                    <div class="post-time">${ago(p.time)}</div>
-                </div>
-            </div>
-            <div class="post-text">${escapeHtml(p.text)}</div>
-            <div class="post-actions">
-                <button class="action-btn ${liked ? 'active' : ''}" data-id="${p.id}" onclick="likePost('${p.id}')">♥ ${(p.likes||[]).length}</button>
-                <button class="action-btn">💬 comment</button>
-                <button class="action-btn">↗ share</button>
-                ${((user && (user.role === ROLE.ADMIN || user.role === ROLE.FULL_ADMIN)) ? `<button class="action-btn" onclick="requestTakedown('${p.id}')">🚫 takedown</button>` : '')}
-            </div>
-        `;
-        box.appendChild(dom);
-    });
-}
-
-/* like post - update firebase */
-async function likePost(id) {
-    if (!user) return alert('log in to like');
-    const ref = db.ref('posts/' + id + '/likes');
-    const snap = await ref.once('value');
-    let likes = snap.val() || [];
-    if (!Array.isArray(likes)) likes = Object.values(likes);
-
-    const idx = likes.indexOf(user.username);
-    if (idx > -1) likes.splice(idx, 1);
-    else likes.push(user.username);
-
-    // write normalized array back
-    await ref.set(likes);
-}
-
-/* -----------------------------
-   REELS
-   ----------------------------- */
-document.getElementById('reelBtn').onclick = async () => {
-    const cap = document.getElementById('reelCaption').value.trim();
-    const url = document.getElementById('reelUrl').value.trim();
-    if (!cap || !user) return;
-    const id = Date.now().toString();
-    const reel = {
-        id,
-        user: user.username,
-        caption: cap,
-        url: url || null,
-        likes: [],
-        time: Date.now()
-    };
-    await db.ref('reels/' + id).set(reel);
-    document.getElementById('reelCaption').value = '';
-    document.getElementById('reelUrl').value = '';
-    reelIdx = 0;
-};
-
-function renderReels() {
-    const box = document.getElementById('reelView');
-    if (!allReels.length) {
-        box.innerHTML = '<div class="reel-placeholder">no reels yet</div>';
-        return;
-    }
-    const r = allReels[reelIdx];
-    const liked = (r.likes || []).includes(user?.username);
-    box.innerHTML = `
-        ${r.url ? `<img src="${r.url}" class="reel-vid" style="width:100%;height:100%;object-fit:cover;">` : '<div class="reel-placeholder" style="height:100%;display:flex;align-items:center;justify-content:center">📹 reel video</div>'}
-        <div class="reel-overlay" style="position:absolute;left:0;right:0;bottom:0;padding:16px;background:linear-gradient(transparent, rgba(0,0,0,0.85));color:#fff;">
-            <div class="reel-user">@${r.user}</div>
-            <div class="reel-caption">${escapeHtml(r.caption)}</div>
+function renderPosts(){
+  const box = document.getElementById('posts');
+  box.innerHTML = '';
+  allPosts.forEach(p=>{
+    const liked = (p.likes||[]).includes(user?.username);
+    const el = document.createElement('div'); el.className='post';
+    el.innerHTML = `
+      <div class="post-top"><div class="pfp">${p.user[0].toUpperCase()}</div>
+        <div>
+          <div><b>${p.user}</b> ${renderBadge(p.user)} <span class="small">• ${timeAgo(p.time)}</span></div>
         </div>
-        <div class="reel-sidebar" style="position:absolute;right:15px;bottom:80px;display:flex;flex-direction:column;gap:12px;">
-            <button class="reel-btn" onclick="likeReel('${r.id}')">${liked ? '♥' : '♡'}<br><small>${(r.likes||[]).length}</small></button>
-            <button class="reel-btn">💬</button>
-            <button class="reel-btn">↗</button>
-        </div>
+      </div>
+      <div class="post-text">${escapeHtml(p.text)}</div>
+      <div class="post-actions">
+        <button class="action-btn" onclick="toggleLikePost('${p.id}')">${liked ? '♥' : '♡'} ${(p.likes||[]).length}</button>
+        <button class="action-btn" onclick="openCommentBox('${p.id}')">💬 ${Object.keys(p.comments||{}).length}</button>
+        <button class="action-btn" onclick="sharePost('${p.id}')">↗ ${p.shares||0}</button>
+        ${(user && (user.role===ROLE.ADMIN||user.role===ROLE.FULL_ADMIN)) ? `<button class="action-btn" onclick="requestTakedown('${p.id}')">🚫 takedown</button>` : ''}
+      </div>
+      <div id="comments-${p.id}"></div>
+      <div id="commentbox-${p.id}" style="margin-top:8px;display:none">
+        <input id="comment-input-${p.id}" placeholder="Write a comment..." />
+        <div style="margin-top:6px"><button class="btn" onclick="submitComment('${p.id}')">Comment</button></div>
+      </div>
     `;
+    box.appendChild(el);
+    renderCommentsFor(p.id);
+  });
 }
 
-async function likeReel(id) {
-    if (!user) return alert('log in to like');
-    const ref = db.ref('reels/' + id + '/likes');
-    const snap = await ref.once('value');
-    let likes = snap.val() || [];
-    if (!Array.isArray(likes)) likes = Object.values(likes);
-
-    const idx = likes.indexOf(user.username);
-    if (idx > -1) likes.splice(idx, 1);
-    else likes.push(user.username);
-
-    await ref.set(likes);
+async function toggleLikePost(id){
+  if(!user) return alert('log in');
+  const ref = db.ref('posts/' + id + '/likes');
+  const snap = await ref.once('value');
+  let likes = snap.val() || [];
+  if(!Array.isArray(likes)) likes = Object.values(likes);
+  const i = likes.indexOf(user.username);
+  if(i>-1) likes.splice(i,1); else likes.push(user.username);
+  await ref.set(likes);
+  logAudit('like_post','post:'+id + ' by ' + user.username);
 }
 
-document.getElementById('prevReel').onclick = () => {
-    if (!allReels.length) return;
-    reelIdx = (reelIdx - 1 + allReels.length) % allReels.length;
-    renderReels();
+async function submitComment(postId){
+  if(!user) return alert('log in');
+  const input = document.getElementById('comment-input-' + postId);
+  const text = input.value.trim();
+  if(!text) return;
+  const id = now().toString();
+  const comment = { id, by: user.username, text, time: now() };
+  await db.ref('posts/' + postId + '/comments/' + id).set(comment);
+  input.value = '';
+  logAudit('comment','post:'+postId + ' comment:'+id);
+  renderCommentsFor(postId);
+}
+
+function openCommentBox(postId){
+  const box = document.getElementById('commentbox-' + postId);
+  if(box) box.style.display = box.style.display==='block' ? 'none' : 'block';
+}
+
+function renderCommentsFor(postId){
+  const p = allPosts.find(x=>x.id===postId); if(!p) return;
+  const box = document.getElementById('comments-' + postId);
+  if(!box) return;
+  box.innerHTML = '';
+  const comments = p.comments || {};
+  Object.keys(comments).sort((a,b)=>comments[a].time - comments[b].time).forEach(k=>{
+    const c = comments[k];
+    const div = document.createElement('div'); div.className='comment';
+    div.innerHTML = `<div class="small"><b>${c.by}</b> • ${timeAgo(c.time)}</div><div style="margin-top:6px">${escapeHtml(c.text)}</div>`;
+    box.appendChild(div);
+  });
+}
+
+async function sharePost(id){
+  if(!user) return alert('log in');
+  const ref = db.ref('posts/' + id + '/shares');
+  const snap = await ref.once('value');
+  let s = snap.val() || 0;
+  s = Number(s) + 1;
+  await ref.set(s);
+  logAudit('share_post','post:'+id+' by '+user.username);
+}
+
+/* --------------------------
+   Reels
+   -------------------------- */
+document.getElementById('reelBtn').onclick = async ()=>{
+  if(!user) return alert('log in');
+  const cap = document.getElementById('reelCaption').value.trim();
+  const url = document.getElementById('reelUrl').value.trim();
+  if(!cap) return alert('caption required');
+  const id = now().toString();
+  const r = { id, user: user.username, caption: cap, url: url||null, likes: [], time: now() };
+  await db.ref('reels/' + id).set(r);
+  document.getElementById('reelCaption').value=''; document.getElementById('reelUrl').value='';
+  logAudit('create_reel','reel:'+id+' by '+user.username);
 };
-document.getElementById('nextReel').onclick = () => {
-    if (!allReels.length) return;
-    reelIdx = (reelIdx + 1) % allReels.length;
-    renderReels();
-};
 
-/* -----------------------------
-   MESSAGES
-   ----------------------------- */
-function renderContacts() {
-    const box = document.getElementById('contactList');
-    box.innerHTML = '';
-    // other users only
-    Object.keys(allUsers).filter(u => u !== (user?.username)).forEach(u => {
-        const div = document.createElement('div');
-        div.className = 'contact' + (chatWith === u ? ' active' : '');
-        div.innerHTML = `<div class="pfp">${u[0].toUpperCase()}</div><div style="flex:1">${u} ${renderBadge(u)}</div>`;
-        div.onclick = () => {
-            chatWith = u;
-            renderContacts();
-            renderChat();
-        };
-        box.appendChild(div);
-    });
+function renderReels(){
+  const box = document.getElementById('reels');
+  box.innerHTML = '';
+  allReels.forEach(r=>{
+    const liked = (r.likes||[]).includes(user?.username);
+    const el = document.createElement('div'); el.className='post';
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px"><div class="pfp">${r.user[0].toUpperCase()}</div><div><b>${r.user}</b> ${renderBadge(r.user)}<div class="small">${timeAgo(r.time)}</div></div></div>
+      <div style="margin-top:8px">${escapeHtml(r.caption)}</div>
+      ${r.url?'<div style="margin-top:8px"><img src="'+r.url+'" style="width:100%;border-radius:8px" /></div>':''}
+      <div style="margin-top:8px"><button class="action-btn" onclick="likeReel('${r.id}')">${liked?'♥':'♡'} ${(r.likes||[]).length}</button></div>`;
+    box.appendChild(el);
+  });
 }
 
-function renderChat() {
-    if (!chatWith) {
-        document.getElementById('chatHead').textContent = 'pick someone to chat';
-        document.getElementById('chatBox').innerHTML = '';
-        return;
+async function likeReel(id){
+  if(!user) return alert('log in');
+  const ref = db.ref('reels/' + id + '/likes');
+  const snap = await ref.once('value');
+  let likes = snap.val() || [];
+  if(!Array.isArray(likes)) likes = Object.values(likes);
+  const idx = likes.indexOf(user.username);
+  if(idx>-1) likes.splice(idx,1); else likes.push(user.username);
+  await ref.set(likes);
+  logAudit('like_reel','reel:'+id);
+}
+
+/* --------------------------
+   Messages
+   -------------------------- */
+function renderContacts(){
+  const box = document.getElementById('contactList'); box.innerHTML='';
+  Object.keys(allUsers).filter(u=>u!==user?.username).forEach(u=>{
+    const div=document.createElement('div'); div.style.display='flex'; div.style.alignItems='center'; div.style.gap='8px'; div.style.padding='6px'; div.style.cursor='pointer';
+    div.innerHTML=`<div class="pfp">${u[0].toUpperCase()}</div><div style="flex:1">${u} ${renderBadge(u)}</div>`;
+    div.onclick = ()=>{ chatWith = u; renderChat(); };
+    box.appendChild(div);
+  });
+}
+
+function renderChat(){
+  const head = document.getElementById('chatHead');
+  const box = document.getElementById('chatBox');
+  if(!chatWith){ head.textContent='pick someone to chat'; box.innerHTML=''; return; }
+  head.textContent = chatWith;
+  const convo = allMsgs.filter(m=>(m.from===user.username && m.to===chatWith) || (m.from===chatWith && m.to===user.username));
+  box.innerHTML = '';
+  convo.forEach(m=>{
+    const d = document.createElement('div'); d.className='small'; d.style.margin='6px'; d.style.textAlign = (m.from===user.username?'right':'left');
+    d.textContent = `${m.from}: ${m.text}`;
+    box.appendChild(d);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+document.getElementById('sendBtn').onclick = async ()=>{
+  if(!user) return alert('log in');
+  if(!chatWith) return alert('pick someone');
+  const txt = document.getElementById('msgInput').value.trim(); if(!txt) return;
+  const id = now().toString();
+  const m = { id, from: user.username, to: chatWith, text: txt, time: now() };
+  await db.ref('messages/' + id).set(m);
+  document.getElementById('msgInput').value='';
+  logAudit('message','to:'+chatWith);
+};
+
+/* --------------------------
+   Follow / Unfollow
+   -------------------------- */
+async function follow(username){
+  if(!user) return alert('log in');
+  if(username === user.username) return;
+  // add to following list of current user, add to followers list of target
+  const aRef = db.ref('users/' + user.username + '/following');
+  const bRef = db.ref('users/' + username + '/followers');
+
+  const aSnap = await aRef.once('value'); let following = aSnap.val() || [];
+  if(!Array.isArray(following)) following = Object.values(following);
+  if(!following.includes(username)) following.push(username);
+  await aRef.set(following);
+
+  const bSnap = await bRef.once('value'); let followers = bSnap.val() || [];
+  if(!Array.isArray(followers)) followers = Object.values(followers);
+  if(!followers.includes(user.username)) followers.push(user.username);
+  await bRef.set(followers);
+
+  logAudit('follow',''+user.username+'->'+username);
+}
+
+async function unfollow(username){
+  if(!user) return alert('log in');
+  const aRef = db.ref('users/' + user.username + '/following');
+  const bRef = db.ref('users/' + username + '/followers');
+
+  const aSnap = await aRef.once('value'); let following = aSnap.val() || [];
+  if(!Array.isArray(following)) following = Object.values(following);
+  following = following.filter(x=>x!==username);
+  await aRef.set(following);
+
+  const bSnap = await bRef.once('value'); let followers = bSnap.val() || [];
+  if(!Array.isArray(followers)) followers = Object.values(followers);
+  followers = followers.filter(x=>x!==user.username);
+  await bRef.set(followers);
+
+  logAudit('unfollow',''+user.username+'->'+username);
+}
+
+/* --------------------------
+   Admin panel & role change
+   -------------------------- */
+function updateAdminBar(){ document.getElementById('adminBar').style.display = (user && (user.role===ROLE.ADMIN || user.role===ROLE.FULL_ADMIN)) ? 'block' : 'none'; }
+document.getElementById('openAdminPanelBtn').onclick = ()=> {
+  if(!user || user.role !== ROLE.FULL_ADMIN) return alert('full-admins only');
+  const p = document.getElementById('adminPanel'); p.style.display = p.style.display==='block' ? 'none' : 'block'; renderAdminPanel();
+};
+
+function renderAdminPanel(){
+  const panel = document.getElementById('adminPanel'); panel.innerHTML = '<h4>Role Manager</h4>';
+  Object.keys(allUsers).forEach(u=>{
+    panel.innerHTML += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="flex:1"><b>@${u}</b> ${renderBadge(u)}</div>
+      <select id="role-select-${u}"><option value="${ROLE.REGULAR}">Regular</option><option value="${ROLE.CERTIFIED}">Certified</option><option value="${ROLE.ADMIN}">Admin</option><option value="${ROLE.FULL_ADMIN}">Full Admin</option></select>
+      <button class="btn" onclick="applyRole('${u}')">Apply</button>
+    </div>`;
+    setTimeout(()=>{ const el=document.getElementById('role-select-'+u); if(el) el.value = allUsers[u].role || ROLE.REGULAR; },50);
+  });
+}
+
+function applyRole(u){
+  const sel = document.getElementById('role-select-'+u); if(!sel) return;
+  const newRole = sel.value;
+  db.ref('users/' + u + '/role').set(newRole);
+  db.ref('users/' + u + '/certified').set(newRole === ROLE.CERTIFIED);
+  logAudit('role_change', u + ' -> ' + newRole + ' by ' + user.username);
+  alert('Role updated.');
+}
+
+/* --------------------------
+   Takedown flow
+   -------------------------- */
+async function requestTakedown(postId){
+  if(!user) return alert('log in');
+  const reason = prompt('Reason for takedown:');
+  if(!reason) return;
+  const id = now().toString();
+  const req = { id, postId, from: user.username, reason, time: now(), handled:false, approved:false };
+  await db.ref('takedowns/' + id).set(req);
+  logAudit('takedown_request','post:'+postId+' by '+user.username);
+  alert('Takedown requested.');
+}
+
+document.getElementById('openTakedownInboxBtn').onclick = ()=>{
+  if(!user || user.role !== ROLE.FULL_ADMIN) return alert('full-admins only');
+  const p = document.getElementById('takedownPanel'); p.style.display=p.style.display==='block'?'none':'block'; renderTakedownPanel();
+};
+
+function renderTakedownPanel(){
+  const panel = document.getElementById('takedownPanel'); panel.innerHTML='<h4>Takedown Inbox</h4>';
+  db.ref('takedowns').once('value').then(snap=>{
+    const list = snap.val() || {};
+    if(!Object.keys(list).length) panel.innerHTML += '<div class="small">No requests</div>';
+    else {
+      Object.keys(list).forEach(k=>{
+        const r = list[k];
+        panel.innerHTML += `<div style="padding:8px;border-bottom:1px solid #122033;margin-bottom:6px">
+          <div><b>Post</b> ${r.postId} <span class="small">by @${r.from} • ${timeAgo(r.time)}</span></div>
+          <div style="margin-top:6px">${escapeHtml(r.reason)}</div>
+          <div style="margin-top:8px"><button class="btn" onclick="approveTakedown('${r.id}','${r.postId}')">Approve</button> <button class="btn" onclick="denyTakedown('${r.id}')">Deny</button></div>
+        </div>`;
+      });
     }
-    document.getElementById('chatHead').textContent = chatWith;
-    const box = document.getElementById('chatBox');
-    box.innerHTML = '';
+  });
+}
 
-    const convo = allMsgs.filter(m =>
-        (m.from === user.username && m.to === chatWith) ||
-        (m.from === chatWith && m.to === user.username)
-    );
+async function approveTakedown(reqId, postId){
+  await db.ref('posts/' + postId).remove();
+  await db.ref('takedowns/' + reqId).remove();
+  logAudit('takedown_approved','post:'+postId+' by '+user.username);
+  alert('Post removed.');
+}
 
-    convo.forEach(m => {
-        const div = document.createElement('div');
-        div.className = 'msg ' + (m.from === user.username ? 'me' : 'them');
-        div.textContent = m.text;
-        box.appendChild(div);
+async function denyTakedown(reqId){
+  await db.ref('takedowns/' + reqId).remove();
+  logAudit('takedown_denied','req:'+reqId+' by '+user.username);
+  alert('Request denied.');
+}
+
+/* --------------------------
+   Badge / UI helpers
+   -------------------------- */
+function renderBadge(username){
+  const u = allUsers[username];
+  if(!u) return '';
+  if(u.role===ROLE.FULL_ADMIN) return '<span class="badge">★ FULL ADMIN</span>';
+  if(u.role===ROLE.ADMIN) return '<span class="badge">✓ ADMIN</span>';
+  if(u.role===ROLE.CERTIFIED) return '<span style="color:#00ff9d;font-weight:700;margin-left:6px">✔ CERTIFIED</span>';
+  return '';
+}
+
+function timeAgo(ts){
+  const s = Math.floor((Date.now()-ts)/1000); if(s<60) return 'just now';
+  const m = Math.floor(s/60); if(m<60) return m+'m ago';
+  const h = Math.floor(m/60); if(h<24) return h+'h ago';
+  const d = Math.floor(h/24); return d+'d ago';
+}
+
+/* --------------------------
+   Notifications & Audit display
+   -------------------------- */
+function renderNotifications(){
+  const list = document.getElementById('notificationsList'); list.innerHTML='';
+  // Very simple: show last few audit entries as notifications for demo
+  db.ref('audit').limitToLast(10).once('value').then(snap=>{
+    const vals = snap.val() || {};
+    Object.keys(vals).reverse().forEach(k=>{
+      const a = vals[k];
+      list.innerHTML += `<div>${escapeHtml(a.by)} • ${escapeHtml(a.action)} <div class="small">${timeAgo(a.time)}</div></div>`;
     });
-
-    box.scrollTop = box.scrollHeight;
+  });
 }
 
-document.getElementById('sendBtn').onclick = async () => {
-    const txt = document.getElementById('msgInput').value.trim();
-    if (!txt || !chatWith || !user) return;
-    const id = Date.now().toString();
-    const msg = {
-        id,
-        from: user.username,
-        to: chatWith,
-        text: txt,
-        time: Date.now()
-    };
-    await db.ref('messages/' + id).set(msg);
-    document.getElementById('msgInput').value = '';
-};
-
-/* enter to send */
-document.getElementById('msgInput').onkeypress = (e) => {
-    if (e.key === 'Enter') document.getElementById('sendBtn').click();
-};
-
-/* -----------------------------
-   Profile rendering
-   ----------------------------- */
-function renderProfile() {
-    if (!user) return;
-    document.getElementById('profPfp').textContent = user.username[0].toUpperCase();
-    document.getElementById('profName').textContent = user.username;
-    document.getElementById('profBio').textContent = user.bio || 'no bio yet';
-    document.getElementById('postStat').textContent = allPosts.filter(p => p.user === user.username).length;
-    document.getElementById('reelStat').textContent = allReels.filter(r => r.user === user.username).length;
-    document.getElementById('profBadge').innerHTML = renderBadge(user.username);
-}
-
-/* -----------------------------
-   Utility rendering helpers
-   ----------------------------- */
-function renderBadge(username) {
-    const u = allUsers[username];
-    if (!u) return '';
-    if (u.role === ROLE.FULL_ADMIN) return `<span style="color:#00d9ff;font-weight:800;margin-left:6px">★ FULL ADMIN</span>`;
-    if (u.role === ROLE.ADMIN) return `<span style="color:#00d9ff;font-weight:700;margin-left:6px">✓ ADMIN</span>`;
-    if (u.role === ROLE.CERTIFIED) return `<span style="color:#0f0;font-weight:700;margin-left:6px">✔ CERTIFIED</span>`;
-    return '';
-}
-
-function ago(ts) {
-    const s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 60) return 'just now';
-    const m = Math.floor(s / 60);
-    if (m < 60) return m + 'm ago';
-    const h = Math.floor(m / 60);
-    if (h < 24) return h + 'h ago';
-    const d = Math.floor(h / 24);
-    return d + 'd ago';
-}
-
-function escapeHtml(s) {
-    return String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-}
-
-/* -----------------------------
-   Admin UI & role management
-   ----------------------------- */
-function updateAdminBar() {
-    if (!user) {
-        document.getElementById('adminBar').style.display = 'none';
-        return;
-    }
-    if (user.role === ROLE.ADMIN || user.role === ROLE.FULL_ADMIN) {
-        document.getElementById('adminBar').style.display = 'block';
-    } else {
-        document.getElementById('adminBar').style.display = 'none';
-    }
-}
-
-document.getElementById('openAdminPanelBtn').onclick = () => {
-    // only full-admin allowed to edit roles
-    if (user.role !== ROLE.FULL_ADMIN) return alert('Only full-admins may edit roles.');
-    const panel = document.getElementById('adminPanel');
-    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-    if (panel.style.display === 'block') renderAdminPanel();
-};
-
-function renderAdminPanel() {
-    const panel = document.getElementById('adminPanel');
-    if (!panel) return;
-    if (user?.role !== ROLE.FULL_ADMIN) {
-        panel.innerHTML = '<div style="padding:8px;color:#ccc">Admin panel (full-admins only)</div>';
-        panel.style.display = 'none';
-        return;
-    }
-
-    let html = '<h3 style="margin-bottom:8px">Role Manager</h3>';
-    html += '<div style="max-height:300px;overflow:auto">';
-    Object.keys(allUsers).forEach(u => {
-        const usr = allUsers[u];
-        html += `<div class="panel-row"><div style="flex:1"><b>@${u}</b> ${renderBadge(u)}</div>
-            <select data-user="${u}">
-                <option value="${ROLE.REGULAR}">Regular</option>
-                <option value="${ROLE.CERTIFIED}">Certified Regular</option>
-                <option value="${ROLE.ADMIN}">Admin</option>
-                <option value="${ROLE.FULL_ADMIN}">Full Admin</option>
-            </select>
-            <button onclick="applyRoleChange('${u}')">Apply</button>
-            </div>`;
+function renderAudit(){
+  const box = document.getElementById('auditList'); box.innerHTML='';
+  db.ref('audit').limitToLast(10).once('value').then(snap=>{
+    const vals = snap.val() || {};
+    Object.keys(vals).reverse().forEach(k=>{
+      const a = vals[k];
+      box.innerHTML += `<div>${escapeHtml(a.by)} • ${escapeHtml(a.action)} <div class="small">${timeAgo(a.time)}</div></div>`;
     });
-    html += '</div>';
-    panel.innerHTML = html;
-
-    // set selects to current values
-    panel.querySelectorAll('select[data-user]').forEach(sel => {
-        const u = sel.getAttribute('data-user');
-        sel.value = allUsers[u]?.role || ROLE.REGULAR;
-    });
+  });
 }
 
-function applyRoleChange(username) {
-    const panel = document.getElementById('adminPanel');
-    const sel = panel.querySelector(`select[data-user="${username}"]`);
-    if (!sel) return;
-    const newRole = sel.value;
-    db.ref('users/' + username + '/role').set(newRole);
-    db.ref('users/' + username + '/certified').set(newRole === ROLE.CERTIFIED);
-    alert('Role updated for ' + username);
+/* --------------------------
+   Render profile stats
+   -------------------------- */
+function renderProfile(){
+  if(!user) return;
+  document.getElementById('profPfp').textContent = user.username[0].toUpperCase();
+  document.getElementById('profName').textContent = user.username;
+  document.getElementById('profBadge').innerHTML = renderBadge(user.username);
+  document.getElementById('profBio').textContent = user.bio || 'no bio yet';
+  document.getElementById('postStat').textContent = allPosts.filter(p=>p.user===user.username).length;
+  document.getElementById('reelStat').textContent = allReels.filter(r=>r.user===user.username).length;
+  document.getElementById('followersStat').textContent = (user.followers || []).length;
+  document.getElementById('followingStat').textContent = (user.following || []).length;
 }
 
-/* -----------------------------
-   Takedown Request Flow
-   ----------------------------- */
-async function requestTakedown(postId) {
-    if (!user) return alert('log in to request takedown');
-    const reason = prompt('Why should this post be removed? (explain)');
-    if (!reason) return;
-
-    const id = Date.now().toString();
-    const req = {
-        id,
-        postId,
-        from: user.username,
-        reason,
-        time: Date.now(),
-        approved: false,
-        handled: false,
-        handledBy: null,
-        handledAt: null
-    };
-    await db.ref('takedowns/' + id).set(req);
-    alert('Takedown request submitted. Full-admins will review.');
+/* --------------------------
+   Misc UI helpers and boot
+   -------------------------- */
+function attachListeners(){
+  document.getElementById('openFeed').onclick = ()=>{ document.querySelector('[data-page="feed"]').click(); };
+  document.getElementById('openMyProfile').onclick = ()=>{ document.querySelector('[data-page="profile"]').click(); };
+  document.getElementById('createReelQuick').onclick = ()=>{ document.querySelector('[data-page="reels"]').click(); };
+  document.getElementById('postText').addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key==='Enter') document.getElementById('postBtn').click(); });
 }
 
-document.getElementById('openTakedownInboxBtn').onclick = () => {
-    if (user.role !== ROLE.FULL_ADMIN) return alert('Only full-admins can view the takedown inbox.');
-    const panel = document.getElementById('takedownPanel');
-    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-    if (panel.style.display === 'block') renderTakedownPanel();
-};
-
-function renderTakedownPanel() {
-    const panel = document.getElementById('takedownPanel');
-    db.ref('takedowns').once('value').then(snap => {
-        const list = snap.val() || {};
-        let html = '<h3 style="margin-bottom:8px">Takedown Inbox</h3>';
-        if (!Object.keys(list).length) html += '<div style="padding:8px;color:#ccc">No requests</div>';
-        else {
-            Object.keys(list).forEach(k => {
-                const r = list[k];
-                html += `<div class="panel-row" style="flex-direction:column;align-items:flex-start">
-                    <div><b>Request ID:</b> ${r.id} <b>Post:</b> ${r.postId} <small style="color:#aaa">requested by @${r.from} • ${ago(r.time)}</small></div>
-                    <div style="margin-top:6px"><b>Reason:</b> ${escapeHtml(r.reason)}</div>
-                    <div style="margin-top:8px">
-                        <button onclick="approveTakedown('${r.id}','${r.postId}')">Approve (delete)</button>
-                        <button onclick="denyTakedown('${r.id}')">Deny</button>
-                    </div>
-                </div>`;
-            });
-        }
-        panel.innerHTML = html;
-    });
+function renderAllDataOnce(){
+  // initial load
+  db.ref('users').once('value').then(snap=>{ allUsers = snap.val() || {}; ensureAlex(); renderContacts(); renderProfile(); });
+  db.ref('posts').once('value').then(snap=>{ const data = snap.val()||{}; allPosts = Object.keys(data).map(k=>{const p=data[k]; p.id=k; p.likes=p.likes||[]; p.comments=p.comments||{}; return p;}).sort((a,b)=>b.time-a.time); renderPosts(); });
+  db.ref('reels').once('value').then(snap=>{ const data = snap.val()||{}; allReels = Object.keys(data).map(k=>{const r=data[k]; r.id=k; r.likes=r.likes||[]; return r;}).sort((a,b)=>b.time-a.time); renderReels();});
+  db.ref('messages').once('value').then(snap=>{ const data = snap.val()||{}; allMsgs = Object.keys(data).map(k=>{const m=data[k]; m.id=k; return m;}).sort((a,b)=>a.time-b.time); renderChat();});
+  db.ref('audit').limitToLast(20).once('value').then(()=>renderAudit());
 }
 
-async function approveTakedown(reqId, postId) {
-    // remove post and remove request
-    await db.ref('posts/' + postId).remove();
-    await db.ref('takedowns/' + reqId).remove();
-    alert('Post removed and request cleared.');
-}
-
-async function denyTakedown(reqId) {
-    // just remove request, optionally store handled flag
-    await db.ref('takedowns/' + reqId).remove();
-    alert('Request denied and cleared.');
-}
-
-/* -----------------------------
-   Render admin-likeable UI pieces
-   ----------------------------- */
-function updateLocalUserFromServer() {
-    if (!user) return;
-    db.ref('users/' + user.username).once('value').then(snap => {
-        if (snap.exists()) {
-            user = snap.val();
-            saveLocalUser();
-            updateAdminBar();
-            renderProfile();
-        }
-    });
-}
-
-/* keep current user in sync periodically */
-setInterval(updateLocalUserFromServer, 5000);
-
-/* -----------------------------
-   Small helpers
-   ----------------------------- */
-window.likePost = likePost; // expose for inline onclick usage
+/* expose some funcs for inline onclicks */
+window.toggleLikePost = toggleLikePost;
+window.openCommentBox = openCommentBox;
+window.submitComment = submitComment;
+window.sharePost = sharePost;
 window.likeReel = likeReel;
-window.requestTakedown = requestTakedown;
-window.applyRoleChange = applyRoleChange;
+window.follow = follow;
+window.unfollow = unfollow;
+window.applyRole = applyRole;
 window.approveTakedown = approveTakedown;
 window.denyTakedown = denyTakedown;
+window.requestTakedown = requestTakedown;
 
-/* -----------------------------
-   Initial UI adjustments
-   ----------------------------- */
-document.addEventListener('click', function() {
-    // ensure adminBar visibility updates if user roles changed
-    updateAdminBar();
-});
+/* Start */
+attachListeners();
+renderAllDataOnce();
+startListeners();
 </script>
 </body>
 </html>
