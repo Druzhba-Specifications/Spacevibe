@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SpaceVibe (admin+md5+firebase)</title>
+
+    <!-- md5 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+
+    <!-- firebase compat (same as your previous file) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        /* --- existing styles lightly adjusted --- */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; background: #1a1a2e; min-height:100vh; color:#fff; }
+        .splash-page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; background: linear-gradient(to bottom right, #0f3460, #16213e, #1a1a2e); }
+        .splash-container { max-width:900px; width:100%; }
+        .logo { text-align:center; margin-bottom:40px; }
+        .logo h1 { font-size:56px; color:#00d9ff; margin-bottom:8px; font-weight:900; letter-spacing:-2px; }
+        .logo p { color:#8b8b8b; font-size:16px; }
+        .auth-grid { display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+        .auth-box { background:#16213e; border-radius:12px; padding:28px; border:1px solid #2a2a4e; }
+        .auth-box h2 { font-size:22px; margin-bottom:16px; color:#fff; }
+        input[type="text"], input[type="password"], textarea { width:100%; padding:12px; background:#0f3460; border:1px solid #2a2a4e; border-radius:8px; color:#fff; font-size:14px; margin-bottom:12px; }
+        .btn { width:100%; padding:12px; background:#00d9ff; color:#0f3460; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; }
+        .btn:hover { background:#00b8d4; }
+        .app-container { display:none; min-height:100vh; background:#0f0f1e; }
+
+        .topbar { background:#16213e; padding:12px 20px; border-bottom:1px solid #2a2a4e; position:sticky; top:0; z-index:200; }
+        .topbar-inner { max-width:1100px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .topbar h1 { color:#00d9ff; font-size:22px; font-weight:900; }
+        .tabs { display:flex; gap:8px; align-items:center; }
+        .tab { background:transparent; border:none; color:#8b8b8b; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:14px; }
+        .tab:hover { background:#0f3460; color:#fff; }
+        .tab.active { background:#00d9ff; color:#0f3460; font-weight:700; }
+
+        #adminBar { display:none; background:#13203a; padding:8px 12px; border-top:1px solid #21324f; border-bottom:1px solid #21324f; }
+        #adminBar .admin-btn { margin-right:8px; padding:8px 10px; border-radius:8px; border:none; background:#00d9ff; color:#031026; font-weight:700; cursor:pointer; }
+
+        .content { max-width:1100px; margin:18px auto; padding:20px; }
+        .page { display:none; }
+        .page.active { display:block; }
+
+        .composer, .post, .reel-create, .profile, .contacts, .chat, .reel-frame { background:#16213e; border-radius:10px; padding:18px; border:1px solid #2a2a4e; }
+
+        .composer textarea { min-height:80px; margin-bottom:12px; }
+        .post { margin-bottom:14px; }
+        .post-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+        .pfp { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#00d9ff,#667eea); display:flex; align-items:center; justify-content:center; font-weight:700; margin-right:8px; font-size:18px; }
+        .post-author { font-weight:700; font-size:15px; }
+        .post-time { font-size:13px; color:#8b8b8b; margin-top:2px; }
+        .post-text { margin:12px 0; line-height:1.5; font-size:15px; }
+        .post-actions { display:flex; gap:14px; padding-top:10px; border-top:1px solid #2a2a4e; }
+
+        .action-btn { background:none; border:none; color:#8b8b8b; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:8px; }
+        .action-btn:hover { color:#00d9ff; }
+        .action-btn.active { color:#ff0080; }
+
+        .msg-layout { display:grid; grid-template-columns:280px 1fr; gap:12px; height:calc(100vh - 160px); }
+        .contacts { overflow-y:auto; }
+        .contact { padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:10px; }
+        .contact:hover { background:#0f3460; }
+        .contact.active { background:#00d9ff; color:#0f0f26; }
+
+        .chat { display:flex; flex-direction:column; }
+        .chat-header { padding:12px; border-bottom:1px solid #2a2a4e; font-weight:700; }
+        .chat-msgs { flex:1; padding:12px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+        .msg { max-width:65%; padding:10px 12px; border-radius:14px; font-size:15px; line-height:1.4; }
+        .msg.me { align-self:flex-end; background:#00d9ff; color:#0f3460; border-bottom-right-radius:4px; }
+        .msg.them { align-self:flex-start; background:#0f3460; }
+
+        .chat-input { padding:12px; border-top:1px solid #2a2a4e; display:flex; gap:10px; }
+        .chat-input input { flex:1; padding:10px; border-radius:8px; border:1px solid #2a2a4e; background:#0f3460; color:#fff; }
+
+        .profile-top { display:flex; align-items:center; gap:18px; margin-bottom:12px; }
+        .stats { display:flex; gap:22px; margin-top:12px; }
+
+        .admin-panel, .takedown-panel { display:none; background:#0f233f; border:1px solid #21324f; padding:12px; border-radius:8px; margin-bottom:12px; }
+        .panel-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px dashed #23324f; }
+        .panel-row:last-child { border-bottom:none; }
+
+        @media (max-width:768px) {
+            .auth-grid { grid-template-columns:1fr; }
+            .msg-layout { grid-template-columns:1fr; height:auto; }
+            .contacts { display:none; }
+            .logo h1 { font-size:48px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="splash" class="splash-page">
+        <div class="splash-container">
+            <div class="logo">
+                <h1>SpaceVibe</h1>
+                <p>your corner of the internet</p>
+            </div>
+
+            <div class="auth-grid">
+                <div class="auth-box">
+                    <h2>sign up</h2>
+                    <form id="signupForm">
+                        <input type="text" id="signupUser" placeholder="username" required />
+                        <input type="password" id="signupPass" placeholder="password" required />
+                        <textarea id="signupBio" placeholder="about you..."></textarea>
+                        <button type="submit" class="btn">create account</button>
+                    </form>
+                </div>
+
+                <div class="auth-box">
+                    <h2>log in</h2>
+                    <form id="loginForm">
+                        <input type="text" id="loginUser" placeholder="username" required />
+                        <input type="password" id="loginPass" placeholder="password" required />
+                        <button type="submit" class="btn">enter</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app" class="app-container">
+        <div class="topbar">
+            <div class="topbar-inner">
+                <h1>SpaceVibe</h1>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="tabs">
+                        <button class="tab active" data-page="feed">feed</button>
+                        <button class="tab" data-page="reels">reels</button>
+                        <button class="tab" data-page="messages">messages</button>
+                        <button class="tab" data-page="profile">profile</button>
+                        <button class="tab" id="logout">logout</button>
+                    </div>
+                    <div id="currentUserDisplay" style="margin-left:8px;color:#8b8b8b;font-weight:700;"></div>
+                </div>
+            </div>
+
+            <!-- internal admin bar -->
+            <div id="adminBar">
+                <button class="admin-btn" id="openAdminPanelBtn">Admin Panel</button>
+                <button class="admin-btn" id="openTakedownInboxBtn">Takedown Inbox</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- admin panel UI (hidden until opened) -->
+            <div id="adminPanel" class="admin-panel"></div>
+            <div id="takedownPanel" class="takedown-panel"></div>
+
+            <div id="feed" class="page active">
+                <div class="composer">
+                    <textarea id="postText" placeholder="what's happening?"></textarea>
+                    <button class="btn" id="postBtn">post</button>
+                </div>
+                <div id="posts"></div>
+            </div>
+
+            <div id="reels" class="page">
+                <div class="reel-create">
+                    <input type="text" id="reelUrl" placeholder="video url (optional)" />
+                    <textarea id="reelCaption" placeholder="caption..."></textarea>
+                    <button class="btn" id="reelBtn">post reel</button>
+                </div>
+                <div class="reel-viewer-wrap">
+                    <div class="reel-box">
+                        <div class="reel-frame" id="reelView">
+                            <div class="reel-placeholder">no reels yet</div>
+                        </div>
+                        <div class="reel-nav" style="display:flex;justify-content:center;gap:12px;margin-top:12px;">
+                            <button id="prevReel">← prev</button>
+                            <button id="nextReel">next →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="messages" class="page">
+                <div class="msg-layout">
+                    <div class="contacts">
+                        <h3>people</h3>
+                        <div id="contactList"></div>
+                    </div>
+                    <div class="chat">
+                        <div class="chat-header" id="chatHead">pick someone to chat</div>
+                        <div class="chat-msgs" id="chatBox"></div>
+                        <div class="chat-input">
+                            <input type="text" id="msgInput" placeholder="message..." />
+                            <button class="send-btn" id="sendBtn">send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="profile" class="page">
+                <div class="profile">
+                    <div class="profile-top">
+                        <div class="pfp" id="profPfp"></div>
+                        <div>
+                            <h2 id="profName"></h2>
+                            <div id="profBadge" style="margin-top:6px;"></div>
+                        </div>
+                    </div>
+                    <div class="profile-bio" id="profBio"></div>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-num" id="postStat">0</div>
+                            <div class="stat-label">posts</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-num" id="reelStat">0</div>
+                            <div class="stat-label">reels</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/* -----------------------------
+   Firebase config (your values)
+   ----------------------------- */
+const firebaseConfig = {
+    apiKey: "AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
+    authDomain: "spacevibe-backend.firebaseapp.com",
+    projectId: "spacevibe-backend",
+    storageBucket: "spacevibe-backend.firebasestorage.app",
+    messagingSenderId: "258209625594",
+    appId: "1:258209625594:web:a21c48b7e7100462012043"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* -----------------------------
+   Roles & state
+   ----------------------------- */
+const ROLE = {
+    FULL_ADMIN: "full-admin",
+    ADMIN: "admin",
+    CERTIFIED: "certified",
+    REGULAR: "regular"
+};
+
+let user = null;
+let allUsers = {};
+let allPosts = [];
+let allReels = [];
+let allMsgs = [];
+let reelIdx = 0;
+let chatWith = null;
+
+/* -----------------------------
+   Load app
+   ----------------------------- */
+function load() {
+    // load saved session username
+    const saved = JSON.parse(localStorage.getItem('user') || 'null');
+    if (saved && saved.username) {
+        // fetch up-to-date user object from firebase
+        db.ref('users/' + saved.username).once('value').then(snap => {
+            if (snap.exists()) {
+                user = snap.val();
+                localStorage.setItem('user', JSON.stringify(user));
+                showApp();
+                loadFromFirebase();
+            } else {
+                // session broken
+                localStorage.removeItem('user');
+            }
+        });
+    }
+}
+load();
+
+/* -----------------------------
+   Realtime listeners for data
+   ----------------------------- */
+function loadFromFirebase() {
+    // Users
+    db.ref('users').on('value', (snap) => {
+        allUsers = snap.val() || {};
+        ensureAlex();
+        renderContacts();
+        renderProfile();
+        renderPosts(); // badges
+        renderReels();
+        renderAdminPanel();
+    });
+
+    // Posts
+    db.ref('posts').on('value', (snap) => {
+        const data = snap.val() || {};
+        // convert object to array, preserving id keys
+        allPosts = Object.keys(data || {}).map(k => {
+            const p = data[k];
+            p.id = k;
+            // normalize likes
+            p.likes = Array.isArray(p.likes) ? p.likes : (p.likes ? Object.values(p.likes) : []);
+            return p;
+        }).sort((a,b) => b.time - a.time);
+        renderPosts();
+    });
+
+    // Reels
+    db.ref('reels').on('value', (snap) => {
+        const data = snap.val() || {};
+        allReels = Object.keys(data || {}).map(k => {
+            const r = data[k];
+            r.id = k;
+            r.likes = Array.isArray(r.likes) ? r.likes : (r.likes ? Object.values(r.likes) : []);
+            return r;
+        }).sort((a,b) => b.time - a.time);
+        if (reelIdx >= allReels.length) reelIdx = Math.max(0, allReels.length - 1);
+        renderReels();
+    });
+
+    // Messages
+    db.ref('messages').on('value', (snap) => {
+        const data = snap.val() || {};
+        allMsgs = Object.keys(data || {}).map(k => {
+            const m = data[k];
+            m.id = k;
+            return m;
+        }).sort((a,b) => a.time - b.time);
+        renderChat();
+        renderContacts(); // ensure unread or last message order if you want in future
+    });
+
+    // Takedowns (for full-admin inbox UI)
+    db.ref('takedowns').on('value', (snap) => {
+        renderTakedownPanel();
+    });
+}
+
+/* -----------------------------
+   Helpers
+   ----------------------------- */
+function saveLocalUser() {
+    if (user) localStorage.setItem('user', JSON.stringify(user));
+}
+
+function ensureAlex() {
+    // ensure alexmaxxing exists and is full-admin & certified
+    if (!allUsers["alexmaxxing"]) {
+        const alex = {
+            username: "alexmaxxing",
+            password: md5("password123"), // placeholder — encourage changing
+            bio: "primary full admin",
+            joined: Date.now(),
+            role: ROLE.FULL_ADMIN,
+            certified: true
+        };
+        db.ref('users/alexmaxxing').set(alex);
+        return;
+    }
+    // if exists but not full-admin, promote (idempotent)
+    const a = allUsers["alexmaxxing"];
+    if (a.role !== ROLE.FULL_ADMIN || !a.certified) {
+        db.ref('users/alexmaxxing/role').set(ROLE.FULL_ADMIN);
+        db.ref('users/alexmaxxing/certified').set(true);
+    }
+}
+
+/* -----------------------------
+   Signup / Login
+   ----------------------------- */
+document.getElementById('signupForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const u = document.getElementById('signupUser').value.trim();
+    const p = document.getElementById('signupPass').value;
+    const b = document.getElementById('signupBio').value.trim();
+
+    if (!u || !p) return alert('username & password required');
+
+    const snap = await db.ref('users/' + u).once('value');
+    if (snap.exists()) return alert('username taken');
+
+    const newUser = {
+        username: u,
+        password: md5(p),
+        bio: b,
+        joined: Date.now(),
+        role: ROLE.REGULAR,
+        certified: false
+    };
+
+    await db.ref('users/' + u).set(newUser);
+    user = newUser;
+    saveLocalUser();
+    showApp();
+    loadFromFirebase();
+};
+
+document.getElementById('loginForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const u = document.getElementById('loginUser').value.trim();
+    const p = document.getElementById('loginPass').value;
+
+    const snap = await db.ref('users/' + u).once('value');
+    if (snap.exists() && snap.val().password === md5(p)) {
+        user = snap.val();
+        saveLocalUser();
+        showApp();
+        loadFromFirebase();
+    } else {
+        alert('wrong username or password');
+    }
+};
+
+document.getElementById('logout').onclick = () => {
+    user = null;
+    localStorage.removeItem('user');
+    document.getElementById('splash').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+};
+
+/* -----------------------------
+   Show app + UI toggles
+   ----------------------------- */
+function showApp() {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('currentUserDisplay').textContent = user ? '@' + user.username : '';
+    renderPosts();
+    renderReels();
+    renderContacts();
+    renderProfile();
+    updateAdminBar();
+}
+
+/* tabs */
+document.querySelectorAll('.tab[data-page]').forEach(t => {
+    t.onclick = () => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(t.dataset.page).classList.add('active');
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        t.classList.add('active');
+    };
+});
+
+/* -----------------------------
+   POSTS (Firebase writes)
+   ----------------------------- */
+document.getElementById('postBtn').onclick = async () => {
+    const txt = document.getElementById('postText').value.trim();
+    if (!txt || !user) return;
+    const id = Date.now().toString();
+    const post = {
+        id,
+        user: user.username,
+        text: txt,
+        likes: [],
+        time: Date.now()
+    };
+    await db.ref('posts/' + id).set(post);
+    document.getElementById('postText').value = '';
+};
+
+/* render posts */
+function renderPosts() {
+    const box = document.getElementById('posts');
+    box.innerHTML = '';
+    allPosts.forEach(p => {
+        const liked = (p.likes || []).includes(user?.username);
+        const badge = renderBadge(p.user);
+        const dom = document.createElement('div');
+        dom.className = 'post';
+        dom.innerHTML = `
+            <div class="post-top">
+                <div class="pfp">${p.user[0].toUpperCase()}</div>
+                <div>
+                    <div class="post-author">${p.user} ${badge}</div>
+                    <div class="post-time">${ago(p.time)}</div>
+                </div>
+            </div>
+            <div class="post-text">${escapeHtml(p.text)}</div>
+            <div class="post-actions">
+                <button class="action-btn ${liked ? 'active' : ''}" data-id="${p.id}" onclick="likePost('${p.id}')">♥ ${(p.likes||[]).length}</button>
+                <button class="action-btn">💬 comment</button>
+                <button class="action-btn">↗ share</button>
+                ${((user && (user.role === ROLE.ADMIN || user.role === ROLE.FULL_ADMIN)) ? `<button class="action-btn" onclick="requestTakedown('${p.id}')">🚫 takedown</button>` : '')}
+            </div>
+        `;
+        box.appendChild(dom);
+    });
+}
+
+/* like post - update firebase */
+async function likePost(id) {
+    if (!user) return alert('log in to like');
+    const ref = db.ref('posts/' + id + '/likes');
+    const snap = await ref.once('value');
+    let likes = snap.val() || [];
+    if (!Array.isArray(likes)) likes = Object.values(likes);
+
+    const idx = likes.indexOf(user.username);
+    if (idx > -1) likes.splice(idx, 1);
+    else likes.push(user.username);
+
+    // write normalized array back
+    await ref.set(likes);
+}
+
+/* -----------------------------
+   REELS
+   ----------------------------- */
+document.getElementById('reelBtn').onclick = async () => {
+    const cap = document.getElementById('reelCaption').value.trim();
+    const url = document.getElementById('reelUrl').value.trim();
+    if (!cap || !user) return;
+    const id = Date.now().toString();
+    const reel = {
+        id,
+        user: user.username,
+        caption: cap,
+        url: url || null,
+        likes: [],
+        time: Date.now()
+    };
+    await db.ref('reels/' + id).set(reel);
+    document.getElementById('reelCaption').value = '';
+    document.getElementById('reelUrl').value = '';
+    reelIdx = 0;
+};
+
+function renderReels() {
+    const box = document.getElementById('reelView');
+    if (!allReels.length) {
+        box.innerHTML = '<div class="reel-placeholder">no reels yet</div>';
+        return;
+    }
+    const r = allReels[reelIdx];
+    const liked = (r.likes || []).includes(user?.username);
+    box.innerHTML = `
+        ${r.url ? `<img src="${r.url}" class="reel-vid" style="width:100%;height:100%;object-fit:cover;">` : '<div class="reel-placeholder" style="height:100%;display:flex;align-items:center;justify-content:center">📹 reel video</div>'}
+        <div class="reel-overlay" style="position:absolute;left:0;right:0;bottom:0;padding:16px;background:linear-gradient(transparent, rgba(0,0,0,0.85));color:#fff;">
+            <div class="reel-user">@${r.user}</div>
+            <div class="reel-caption">${escapeHtml(r.caption)}</div>
+        </div>
+        <div class="reel-sidebar" style="position:absolute;right:15px;bottom:80px;display:flex;flex-direction:column;gap:12px;">
+            <button class="reel-btn" onclick="likeReel('${r.id}')">${liked ? '♥' : '♡'}<br><small>${(r.likes||[]).length}</small></button>
+            <button class="reel-btn">💬</button>
+            <button class="reel-btn">↗</button>
+        </div>
+    `;
+}
+
+async function likeReel(id) {
+    if (!user) return alert('log in to like');
+    const ref = db.ref('reels/' + id + '/likes');
+    const snap = await ref.once('value');
+    let likes = snap.val() || [];
+    if (!Array.isArray(likes)) likes = Object.values(likes);
+
+    const idx = likes.indexOf(user.username);
+    if (idx > -1) likes.splice(idx, 1);
+    else likes.push(user.username);
+
+    await ref.set(likes);
+}
+
+document.getElementById('prevReel').onclick = () => {
+    if (!allReels.length) return;
+    reelIdx = (reelIdx - 1 + allReels.length) % allReels.length;
+    renderReels();
+};
+document.getElementById('nextReel').onclick = () => {
+    if (!allReels.length) return;
+    reelIdx = (reelIdx + 1) % allReels.length;
+    renderReels();
+};
+
+/* -----------------------------
+   MESSAGES
+   ----------------------------- */
+function renderContacts() {
+    const box = document.getElementById('contactList');
+    box.innerHTML = '';
+    // other users only
+    Object.keys(allUsers).filter(u => u !== (user?.username)).forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'contact' + (chatWith === u ? ' active' : '');
+        div.innerHTML = `<div class="pfp">${u[0].toUpperCase()}</div><div style="flex:1">${u} ${renderBadge(u)}</div>`;
+        div.onclick = () => {
+            chatWith = u;
+            renderContacts();
+            renderChat();
+        };
+        box.appendChild(div);
+    });
+}
+
+function renderChat() {
+    if (!chatWith) {
+        document.getElementById('chatHead').textContent = 'pick someone to chat';
+        document.getElementById('chatBox').innerHTML = '';
+        return;
+    }
+    document.getElementById('chatHead').textContent = chatWith;
+    const box = document.getElementById('chatBox');
+    box.innerHTML = '';
+
+    const convo = allMsgs.filter(m =>
+        (m.from === user.username && m.to === chatWith) ||
+        (m.from === chatWith && m.to === user.username)
+    );
+
+    convo.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'msg ' + (m.from === user.username ? 'me' : 'them');
+        div.textContent = m.text;
+        box.appendChild(div);
+    });
+
+    box.scrollTop = box.scrollHeight;
+}
+
+document.getElementById('sendBtn').onclick = async () => {
+    const txt = document.getElementById('msgInput').value.trim();
+    if (!txt || !chatWith || !user) return;
+    const id = Date.now().toString();
+    const msg = {
+        id,
+        from: user.username,
+        to: chatWith,
+        text: txt,
+        time: Date.now()
+    };
+    await db.ref('messages/' + id).set(msg);
+    document.getElementById('msgInput').value = '';
+};
+
+/* enter to send */
+document.getElementById('msgInput').onkeypress = (e) => {
+    if (e.key === 'Enter') document.getElementById('sendBtn').click();
+};
+
+/* -----------------------------
+   Profile rendering
+   ----------------------------- */
+function renderProfile() {
+    if (!user) return;
+    document.getElementById('profPfp').textContent = user.username[0].toUpperCase();
+    document.getElementById('profName').textContent = user.username;
+    document.getElementById('profBio').textContent = user.bio || 'no bio yet';
+    document.getElementById('postStat').textContent = allPosts.filter(p => p.user === user.username).length;
+    document.getElementById('reelStat').textContent = allReels.filter(r => r.user === user.username).length;
+    document.getElementById('profBadge').innerHTML = renderBadge(user.username);
+}
+
+/* -----------------------------
+   Utility rendering helpers
+   ----------------------------- */
+function renderBadge(username) {
+    const u = allUsers[username];
+    if (!u) return '';
+    if (u.role === ROLE.FULL_ADMIN) return `<span style="color:#00d9ff;font-weight:800;margin-left:6px">★ FULL ADMIN</span>`;
+    if (u.role === ROLE.ADMIN) return `<span style="color:#00d9ff;font-weight:700;margin-left:6px">✓ ADMIN</span>`;
+    if (u.role === ROLE.CERTIFIED) return `<span style="color:#0f0;font-weight:700;margin-left:6px">✔ CERTIFIED</span>`;
+    return '';
+}
+
+function ago(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    const d = Math.floor(h / 24);
+    return d + 'd ago';
+}
+
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+/* -----------------------------
+   Admin UI & role management
+   ----------------------------- */
+function updateAdminBar() {
+    if (!user) {
+        document.getElementById('adminBar').style.display = 'none';
+        return;
+    }
+    if (user.role === ROLE.ADMIN || user.role === ROLE.FULL_ADMIN) {
+        document.getElementById('adminBar').style.display = 'block';
+    } else {
+        document.getElementById('adminBar').style.display = 'none';
+    }
+}
+
+document.getElementById('openAdminPanelBtn').onclick = () => {
+    // only full-admin allowed to edit roles
+    if (user.role !== ROLE.FULL_ADMIN) return alert('Only full-admins may edit roles.');
+    const panel = document.getElementById('adminPanel');
+    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    if (panel.style.display === 'block') renderAdminPanel();
+};
+
+function renderAdminPanel() {
+    const panel = document.getElementById('adminPanel');
+    if (!panel) return;
+    if (user?.role !== ROLE.FULL_ADMIN) {
+        panel.innerHTML = '<div style="padding:8px;color:#ccc">Admin panel (full-admins only)</div>';
+        panel.style.display = 'none';
+        return;
+    }
+
+    let html = '<h3 style="margin-bottom:8px">Role Manager</h3>';
+    html += '<div style="max-height:300px;overflow:auto">';
+    Object.keys(allUsers).forEach(u => {
+        const usr = allUsers[u];
+        html += `<div class="panel-row"><div style="flex:1"><b>@${u}</b> ${renderBadge(u)}</div>
+            <select data-user="${u}">
+                <option value="${ROLE.REGULAR}">Regular</option>
+                <option value="${ROLE.CERTIFIED}">Certified Regular</option>
+                <option value="${ROLE.ADMIN}">Admin</option>
+                <option value="${ROLE.FULL_ADMIN}">Full Admin</option>
+            </select>
+            <button onclick="applyRoleChange('${u}')">Apply</button>
+            </div>`;
+    });
+    html += '</div>';
+    panel.innerHTML = html;
+
+    // set selects to current values
+    panel.querySelectorAll('select[data-user]').forEach(sel => {
+        const u = sel.getAttribute('data-user');
+        sel.value = allUsers[u]?.role || ROLE.REGULAR;
+    });
+}
+
+function applyRoleChange(username) {
+    const panel = document.getElementById('adminPanel');
+    const sel = panel.querySelector(`select[data-user="${username}"]`);
+    if (!sel) return;
+    const newRole = sel.value;
+    db.ref('users/' + username + '/role').set(newRole);
+    db.ref('users/' + username + '/certified').set(newRole === ROLE.CERTIFIED);
+    alert('Role updated for ' + username);
+}
+
+/* -----------------------------
+   Takedown Request Flow
+   ----------------------------- */
+async function requestTakedown(postId) {
+    if (!user) return alert('log in to request takedown');
+    const reason = prompt('Why should this post be removed? (explain)');
+    if (!reason) return;
+
+    const id = Date.now().toString();
+    const req = {
+        id,
+        postId,
+        from: user.username,
+        reason,
+        time: Date.now(),
+        approved: false,
+        handled: false,
+        handledBy: null,
+        handledAt: null
+    };
+    await db.ref('takedowns/' + id).set(req);
+    alert('Takedown request submitted. Full-admins will review.');
+}
+
+document.getElementById('openTakedownInboxBtn').onclick = () => {
+    if (user.role !== ROLE.FULL_ADMIN) return alert('Only full-admins can view the takedown inbox.');
+    const panel = document.getElementById('takedownPanel');
+    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    if (panel.style.display === 'block') renderTakedownPanel();
+};
+
+function renderTakedownPanel() {
+    const panel = document.getElementById('takedownPanel');
+    db.ref('takedowns').once('value').then(snap => {
+        const list = snap.val() || {};
+        let html = '<h3 style="margin-bottom:8px">Takedown Inbox</h3>';
+        if (!Object.keys(list).length) html += '<div style="padding:8px;color:#ccc">No requests</div>';
+        else {
+            Object.keys(list).forEach(k => {
+                const r = list[k];
+                html += `<div class="panel-row" style="flex-direction:column;align-items:flex-start">
+                    <div><b>Request ID:</b> ${r.id} <b>Post:</b> ${r.postId} <small style="color:#aaa">requested by @${r.from} • ${ago(r.time)}</small></div>
+                    <div style="margin-top:6px"><b>Reason:</b> ${escapeHtml(r.reason)}</div>
+                    <div style="margin-top:8px">
+                        <button onclick="approveTakedown('${r.id}','${r.postId}')">Approve (delete)</button>
+                        <button onclick="denyTakedown('${r.id}')">Deny</button>
+                    </div>
+                </div>`;
+            });
+        }
+        panel.innerHTML = html;
+    });
+}
+
+async function approveTakedown(reqId, postId) {
+    // remove post and remove request
+    await db.ref('posts/' + postId).remove();
+    await db.ref('takedowns/' + reqId).remove();
+    alert('Post removed and request cleared.');
+}
+
+async function denyTakedown(reqId) {
+    // just remove request, optionally store handled flag
+    await db.ref('takedowns/' + reqId).remove();
+    alert('Request denied and cleared.');
+}
+
+/* -----------------------------
+   Render admin-likeable UI pieces
+   ----------------------------- */
+function updateLocalUserFromServer() {
+    if (!user) return;
+    db.ref('users/' + user.username).once('value').then(snap => {
+        if (snap.exists()) {
+            user = snap.val();
+            saveLocalUser();
+            updateAdminBar();
+            renderProfile();
+        }
+    });
+}
+
+/* keep current user in sync periodically */
+setInterval(updateLocalUserFromServer, 5000);
+
+/* -----------------------------
+   Small helpers
+   ----------------------------- */
+window.likePost = likePost; // expose for inline onclick usage
+window.likeReel = likeReel;
+window.requestTakedown = requestTakedown;
+window.applyRoleChange = applyRoleChange;
+window.approveTakedown = approveTakedown;
+window.denyTakedown = denyTakedown;
+
+/* -----------------------------
+   Initial UI adjustments
+   ----------------------------- */
+document.addEventListener('click', function() {
+    // ensure adminBar visibility updates if user roles changed
+    updateAdminBar();
+});
+</script>
+</body>
+</html>
