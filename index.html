@@ -149,308 +149,420 @@
 
 <!-- minimal icons (text-based) -->
 <script>
-/* Firebase init */
-const firebaseConfig = {
-  apiKey: "AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
-  authDomain: "spacevibe-backend.firebaseapp.com",
-  databaseURL: "https://spacevibe-backend-default-rtdb.firebaseio.com",
-  projectId: "spacevibe-backend",
-  storageBucket: "spacevibe-backend.firebasestorage.app",
-  messagingSenderId: "258209625594",
-  appId: "1:258209625594:web:a21c48b7e7100462012043"
+/* FIREBASE INIT */
+const firebaseConfig={
+ apiKey:"AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
+ authDomain:"spacevibe-backend.firebaseapp.com",
+ databaseURL:"https://spacevibe-backend-default-rtdb.firebaseio.com",
+ projectId:"spacevibe-backend",
+ storageBucket:"spacevibe-backend.firebasestorage.app",
+ messagingSenderId:"258209625594",
+ appId:"1:258209625594:web:a21c48b7e7100462012043"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db=firebase.database();
 
-/* state */
-let user = null;
-let allUsers = {};
-let allPosts = {};
-let allReels = {};
-let allMsgs = {};
-let chatWith = null;
+/* GLOBAL */
+let user=null;
+let allUsers={},allPosts={},allReels={},allMsgs={};
+let chatWith=null;
 
-/* roles */
-const ROLE = { FULL: "full-admin", ADMIN: "admin", CERT: "certified", REG: "regular" };
+/* CONSTANTS */
+const ROLE={FULL:"full-admin",ADMIN:"admin",CERT:"certified",REG:"regular"};
+const md5v=v=>md5(String(v||""));
 
-/* helpers */
-function md5v(v){ try{ return md5(String(v||'')); }catch(e){ return String(v||''); } }
-function now(){ return Date.now(); }
-function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000); if(s<60) return 'just now'; const m=Math.floor(s/60); if(m<60) return m+'m ago'; const h=Math.floor(m/60); if(h<24) return h+'h ago'; const d=Math.floor(h/24); return d+'d ago'; }
-function saveLocal(){ if(user) localStorage.setItem('spacevibe_user', JSON.stringify(user)); }
+/* UTIL */
+const escapeHtml=s=>String(s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const now=()=>Date.now();
+const timeAgo=t=>{
+ const s=Math.floor((Date.now()-t)/1000);
+ if(s<60)return"just now";
+ const m=Math.floor(s/60);if(m<60)return m+"m ago";
+ const h=Math.floor(m/60);if(h<24)return h+"h ago";
+ const d=Math.floor(h/24);return d+"d ago";
+};
 
-/* audit */
-function audit(action, details){
-  const id = now().toString() + Math.random().toString(36).slice(2,6);
-  const entry = { id, by: user?user.username:'anon', action, details, time: now() };
-  db.ref('audit/' + id).set(entry);
-}
-
-/* UI helpers */
-function showApp(){ document.getElementById('splash').style.display='none'; document.getElementById('app').style.display='block'; document.getElementById('currentUser').textContent = user ? '@'+user.username : ''; updateAdminBar(); renderProfile(); renderNotifications(); renderAudit(); }
-function switchPage(p){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('[data-page]').forEach(t=>{ if(t.dataset.page===p) t.classList.add('active'); });
-  document.getElementById('feedPage').style.display = (p==='feed') ? 'block' : 'none';
-  document.getElementById('reelsPage').style.display = (p==='reels') ? 'block' : 'none';
-  document.getElementById('messagesPage').style.display = (p==='messages') ? 'block' : 'none';
-  document.getElementById('profilePage').style.display = (p==='profile') ? 'block' : 'none';
-}
-
-/* AUTH (custom) */
-async function signup(){
-  const u = document.getElementById('su_user').value.trim();
-  const e = document.getElementById('su_email').value.trim();
-  const p = document.getElementById('su_pass').value;
-  const b = document.getElementById('su_bio').value.trim();
-  if(!u || !p) return alert('username + password required');
-  const snap = await db.ref('users/' + u).once('value');
-  if(snap.exists()) return alert('username taken');
-  const emailHash = md5v(e);
-  const emailVerified = (e === 'alexsentme');
-  const obj = { username: u, password: md5v(p), emailHash, emailVerified, bio: b, joined: now(), role: ROLE.REG, certified: false, followers: [], following: [] };
-  await db.ref('users/' + u).set(obj);
-  user = obj; saveLocal(); audit('signup','user:'+u); startApp();
-}
-async function login(){
-  const u = document.getElementById('li_user').value.trim();
-  const p = document.getElementById('li_pass').value;
-  if(!u || !p) return alert('username + password required');
-  const snap = await db.ref('users/' + u).once('value');
-  if(!snap.exists()) return alert('user not found');
-  const d = snap.val();
-  if(d.password !== md5v(p)) return alert('wrong password');
-  user = d; saveLocal(); audit('login','user:'+u); startApp();
-}
-function logout(){ audit('logout','user:'+ (user?user.username:'anon')); localStorage.removeItem('spacevibe_user'); location.reload(); }
-
-/* start app */
-function startApp(){
-  showApp();
-  bindListeners();
-  listenRealtime();
-  ensureAlex();
-}
-
-/* realtime listeners */
-function listenRealtime(){
-  db.ref('users').on('value', s => { allUsers = s.val() || {}; if(user && allUsers[user.username]) user = allUsers[user.username]; renderProfile(); renderChatList(); updateAdminBar(); });
-  db.ref('posts').on('value', s => { allPosts = s.val() || {}; renderPosts(); renderProfile(); });
-  db.ref('reels').on('value', s => { allReels = s.val() || {}; renderReels(); renderProfile(); });
-  db.ref('messages').on('value', s => { allMsgs = s.val() || {}; renderChat(); });
-  db.ref('takedowns').on('value', s => { renderTakedownPanel(); });
-  db.ref('audit').limitToLast(50).on('value', s => { renderAudit(); renderNotifications(); });
-}
-
-/* ensure admin */
-function ensureAlex(){
-  if(!allUsers['alexmaxxing']){
-    const a = { username:'alexmaxxing', password:md5v('password123'), emailHash:md5v('alex@local'), emailVerified:true, bio:'Full Admin', joined:now(), role:ROLE.FULL, certified:true, followers:[], following:[] };
-    db.ref('users/alexmaxxing').set(a); audit('create_user','auto alexmaxxing created');
-  } else {
-    db.ref('users/alexmaxxing/role').set(ROLE.FULL); db.ref('users/alexmaxxing/certified').set(true);
-  }
-}
-
-/* POSTS: create / render / like / comment / share */
-async function createPost(){
-  if(!user) return alert('log in');
-  const text = document.getElementById('postInput').value.trim(); if(!text) return;
-  const id = now().toString();
-  const post = { id, user: user.username, text, likes: [], shares: 0, time: now(), comments: {} };
-  await db.ref('posts/' + id).set(post);
-  document.getElementById('postInput').value = '';
-  audit('create_post','post:'+id+' by '+user.username);
-}
-function renderPosts(){
-  const box = document.getElementById('posts'); box.innerHTML = '';
-  const arr = Object.values(allPosts || {}).sort((a,b)=>b.time - a.time);
-  arr.forEach(p => {
-    const liked = Array.isArray(p.likes) ? p.likes.includes(user?.username) : false;
-    const el = document.createElement('div'); el.className = 'post';
-    el.innerHTML = `<div class="post-header"><div class="pfp">${(p.user[0]||'U').toUpperCase()}</div><div><div style="font-weight:800">${escapeHtml(p.user)} ${renderBadge(p.user)}</div><div class="post-meta">${timeAgo(p.time)}</div></div></div>
-      <div class="post-text">${escapeHtml(p.text)}</div>
-      <div class="post-actions">
-        <button class="action-btn" onclick="toggleLikePost('${p.id}')">${liked ? '♥' : '♡'} ${(p.likes||[]).length}</button>
-        <button class="action-btn" onclick="openCommentBox('${p.id}')">💬 ${Object.keys(p.comments||{}).length}</button>
-        <button class="action-btn" onclick="sharePost('${p.id}')">↗ ${p.shares||0}</button>
-        ${(user && (user.role===ROLE.ADMIN || user.role===ROLE.FULL)) ? `<button class="action-btn" onclick="requestTakedown('${p.id}')">🚫 takedown</button>` : ''}
-        ${renderFollowButton(p.user)}
-      </div>
-      <div id="comments-${p.id}" class="comments"></div>
-      <div id="commentbox-${p.id}" style="display:none;margin-top:8px">
-        <input id="comment-input-${p.id}" placeholder="Write a comment..." />
-        <div style="margin-top:6px"><button class="btn" onclick="submitComment('${p.id}')">Comment</button></div>
-      </div>`;
-    box.appendChild(el);
-    renderCommentsFor(p.id);
-  });
-}
-function renderFollowButton(author){
-  if(!user || user.username===author) return '';
-  const isFollowing = (user.following || []).includes(author);
-  return `<button class="action-btn" onclick="${isFollowing ? `unfollow('${author}')` : `follow('${author}')`}">${isFollowing ? 'Unfollow' : 'Follow'}</button>`;
-}
-async function toggleLikePost(id){
-  if(!user) return alert('log in');
-  const ref = db.ref('posts/' + id + '/likes');
-  const snap = await ref.once('value'); let likes = snap.val() || []; if(!Array.isArray(likes)) likes = Object.values(likes);
-  const i = likes.indexOf(user.username);
-  if(i>-1) likes.splice(i,1); else likes.push(user.username);
-  await ref.set(likes);
-  audit('like_post','post:'+id+' by '+user.username);
-}
-async function submitComment(postId){
-  if(!user) return alert('log in');
-  const input = document.getElementById('comment-input-' + postId); if(!input) return;
-  const text = input.value.trim(); if(!text) return;
-  const id = now().toString();
-  const comment = { id, by: user.username, text, time: now() };
-  await db.ref('posts/' + postId + '/comments/' + id).set(comment);
-  input.value = '';
-  audit('comment','post:'+postId+' comment:'+id);
-  renderCommentsFor(postId);
-}
-function openCommentBox(postId){ const box = document.getElementById('commentbox-' + postId); if(box) box.style.display = box.style.display==='block' ? 'none' : 'block'; }
-function renderCommentsFor(postId){
-  const p = allPosts[postId]; if(!p) return;
-  const area = document.getElementById('comments-' + postId); if(!area) return; area.innerHTML = '';
-  const comments = p.comments || {};
-  Object.keys(comments).sort((a,b)=>comments[a].time - comments[b].time).forEach(k=>{
-    const c = comments[k];
-    const d = document.createElement('div'); d.className='comment';
-    d.innerHTML = `<div class="comment-small"><b>${escapeHtml(c.by)}</b> • ${timeAgo(c.time)}</div><div>${escapeHtml(c.text)}</div>`;
-    area.appendChild(d);
-  });
-}
-async function sharePost(id){
-  if(!user) return alert('log in');
-  const ref = db.ref('posts/' + id + '/shares'); const snap = await ref.once('value'); let s = snap.val() || 0; s = Number(s) + 1; await ref.set(s);
-  audit('share_post','post:'+id+' by '+user.username);
-}
-
-/* REELS: tiktok-like feed + upload */
-function openReelUploader(){ document.getElementById('reelUploader').style.display='block'; switchPage('reels'); }
-function hideReelUploader(){ document.getElementById('reelUploader').style.display='none'; }
-async function uploadReel(){
-  if(!user) return alert('log in');
-  const url = document.getElementById('reel_input_url').value.trim();
-  const caption = document.getElementById('reel_input_caption').value.trim();
-  const id = now().toString(); const r = { id, user: user.username, caption, url: url||null, likes: [], time: now() };
-  await db.ref('reels/' + id).set(r); document.getElementById('reel_input_url').value=''; document.getElementById('reel_input_caption').value=''; hideReelUploader();
-  audit('create_reel','reel:'+id+' by '+user.username);
-}
-function renderReels(){
-  const box = document.getElementById('reels'); box.innerHTML = '';
-  const arr = Object.values(allReels || {}).sort((a,b)=>b.time - a.time);
-  arr.forEach(r=>{
-    const el = document.createElement('div'); el.className = 'reel';
-    const media = r.url ? `<img src="${escapeHtml(r.url)}" class="reel-media">` : `<div style="height:420px;display:flex;align-items:center;justify-content:center;color:#9fb8cf">No media</div>`;
-    const liked = (r.likes||[]).includes(user?.username);
-    el.innerHTML = `${media}<div class="reel-overlay"><div style="font-weight:800">${escapeHtml(r.user)} ${renderBadge(r.user)}</div><div style="margin-top:6px">${escapeHtml(r.caption)}</div></div>
-      <div class="reel-sidebar"><button class="reel-btn" onclick="toggleLikeReel('${r.id}')">${liked ? '♥' : '♡'} ${(r.likes||[]).length}</button></div>`;
-    box.appendChild(el);
-  });
-}
-async function toggleLikeReel(id){
-  if(!user) return alert('log in');
-  const ref = db.ref('reels/' + id + '/likes'); const snap = await ref.once('value'); let likes = snap.val() || []; if(!Array.isArray(likes)) likes = Object.values(likes);
-  const i = likes.indexOf(user.username); if(i>-1) likes.splice(i,1); else likes.push(user.username); await ref.set(likes); audit('like_reel','reel:'+id);
-}
-
-/* FOLLOW / UNFOLLOW */
-async function follow(username){
-  if(!user) return alert('log in');
-  if(username === user.username) return;
-  const mineRef = db.ref('users/' + user.username + '/following'); const theirRef = db.ref('users/' + username + '/followers');
-  const mineSnap = await mineRef.once('value'); let following = mineSnap.val() || []; if(!Array.isArray(following)) following = Object.values(following);
-  if(!following.includes(username)) following.push(username); await mineRef.set(following);
-  const theirSnap = await theirRef.once('value'); let followers = theirSnap.val() || []; if(!Array.isArray(followers)) followers = Object.values(followers);
-  if(!followers.includes(user.username)) followers.push(user.username); await theirRef.set(followers);
-  audit('follow', user.username + '->' + username);
-}
-async function unfollow(username){
-  if(!user) return alert('log in');
-  const mineRef = db.ref('users/' + user.username + '/following'); const theirRef = db.ref('users/' + username + '/followers');
-  const mineSnap = await mineRef.once('value'); let following = mineSnap.val() || []; if(!Array.isArray(following)) following = Object.values(following);
-  following = following.filter(x=>x!==username); await mineRef.set(following);
-  const theirSnap = await theirRef.once('value'); let followers = theirSnap.val() || []; if(!Array.isArray(followers)) followers = Object.values(followers);
-  followers = followers.filter(x=>x!==user.username); await theirRef.set(followers);
-  audit('unfollow', user.username + '->' + username);
-}
-
-/* MESSAGING: only mutual followers can chat except alexmaxxing can chat with anyone */
-function renderChatList(){
-  const box = document.getElementById('chatList'); box.innerHTML = '';
-  if(!allUsers) return;
-  Object.keys(allUsers).filter(u=>u!==user.username).forEach(u=>{
-    const div = document.createElement('div'); div.className = 'chat-item';
-    const canChat = (user.username === 'alexmaxxing') || (allUsers[user.username] && allUsers[user.username].following && allUsers[user.username].following.includes(u) && allUsers[u] && allUsers[u].following && allUsers[u].following.includes(user.username));
-    div.innerHTML = `<div class="pfp" style="width:34px;height:34px;font-size:14px">${u[0].toUpperCase()}</div><div style="flex:1"><div style="font-weight:700">${escapeHtml(u)} ${renderBadge(u)}</div><div class="small">${canChat ? 'can chat' : 'mutual follow required'}</div></div>`;
-    div.onclick = ()=>{ if(!canChat && user.username!=='alexmaxxing') return alert('You can only chat with users who follow you back (mutual follow required).'); chatWith = u; renderChat(); };
-    box.appendChild(div);
-  });
-}
-function renderChat(){
-  const header = document.getElementById('chatHeader'); const box = document.getElementById('chatBox'); box.innerHTML = '';
-  if(!chatWith){ header.textContent = 'Select a conversation'; return; }
-  header.textContent = '@' + chatWith;
-  const conv = Object.values(allMsgs || {}).filter(m => (m.from===user.username && m.to===chatWith) || (m.from===chatWith && m.to===user.username)).sort((a,b)=>a.time-b.time);
-  conv.forEach(m=>{
-    const d = document.createElement('div'); d.className = (m.from===user.username) ? 'msg me' : 'msg them'; d.textContent = m.text; box.appendChild(d);
-  });
-  box.scrollTop = box.scrollHeight;
-}
-async function sendMessage(){
-  if(!user) return alert('log in'); if(!chatWith) return alert('select a conversation');
-  // check mutual unless alex
-  if(user.username!=='alexmaxxing'){
-    const mine = (user.following || []).includes(chatWith); const theirs = (allUsers[chatWith] && allUsers[chatWith].following && allUsers[chatWith].following.includes(user.username));
-    if(!(mine && theirs)) return alert('You can only message users who follow you back (mutual follow).');
-  }
-  const txt = document.getElementById('msgInput').value.trim(); if(!txt) return;
-  const id = now().toString();
-  const msg = { id, from: user.username, to: chatWith, text: txt, time: now() };
-  await db.ref('messages/' + id).set(msg); document.getElementById('msgInput').value=''; audit('message','to:'+chatWith);
-}
-
-/* ADMIN / TAKEDOWNS */
-function updateAdminBar(){ document.getElementById('adminBar').style.display = (user && (user.role===ROLE.ADMIN || user.role===ROLE.FULL)) ? 'block' : 'none'; }
-function toggleAdminPanel(){ if(!user || user.role!==ROLE.FULL) return alert('full-admins only'); const p = document.getElementById('adminPanel'); p.style.display = p.style.display==='block' ? 'none' : 'block'; renderAdminPanel(); }
-function toggleTakedowns(){ if(!user || user.role!==ROLE.FULL) return alert('full-admins only'); const p = document.getElementById('takedownPanel'); p.style.display = p.style.display==='block' ? 'none' : 'block'; renderTakedownPanel(); }
-function renderAdminPanel(){
-  const panel = document.getElementById('adminPanel'); panel.innerHTML = '<h4>Role Manager</h4>';
-  Object.keys(allUsers).forEach(u=>{
-    panel.innerHTML += `<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><div style="flex:1"><b>@${escapeHtml(u)}</b> ${renderBadge(u)}</div>
-      <select id="role-select-${u}"><option value="${ROLE.REG}">Regular</option><option value="${ROLE.CERT}">Certified</option><option value="${ROLE.ADMIN}">Admin</option><option value="${ROLE.FULL}">Full Admin</option></select>
-      <button class="btn" onclick="applyRole('${u}')">Apply</button></div>`;
-    setTimeout(()=>{ const s = document.getElementById('role-select-'+u); if(s && allUsers[u]) s.value = allUsers[u].role || ROLE.REG; },50);
-  });
-}
-function applyRole(u){ const sel = document.getElementById('role-select-'+u); if(!sel) return; const newRole = sel.value; db.ref('users/' + u + '/role').set(newRole); db.ref('users/' + u + '/certified').set(newRole===ROLE.CERT); audit('role_change', u + ' -> ' + newRole + ' by ' + user.username); alert('Role updated'); }
-async function requestTakedown(postId){ if(!user) return alert('log in'); const reason = prompt('Reason for takedown:'); if(!reason) return; const id = now().toString(); const req = { id, postId, from: user.username, reason, time: now(), handled:false, approved:false }; await db.ref('takedowns/' + id).set(req); audit('takedown_request','post:'+postId+' by '+user.username); alert('Takedown requested'); }
-function renderTakedownPanel(){ const panel = document.getElementById('takedownPanel'); panel.innerHTML = '<h4>Takedown Inbox</h4>'; db.ref('takedowns').once('value').then(snap=>{ const list = snap.val() || {}; if(Object.keys(list).length===0) panel.innerHTML += '<div class="small">No requests</div>'; else Object.keys(list).forEach(k=>{ const r=list[k]; panel.innerHTML += `<div style="padding:8px;border-top:1px solid #122233;margin-top:8px"><div><b>Post</b> ${r.postId} <span class="small">by @${escapeHtml(r.from)} • ${timeAgo(r.time)}</span></div><div style="margin-top:6px">${escapeHtml(r.reason)}</div><div style="margin-top:8px"><button class="btn" onclick="approveTakedown('${r.id}','${r.postId}')">Approve</button> <button class="btn" onclick="denyTakedown('${r.id}')">Deny</button></div></div>` }) }); }
-async function approveTakedown(reqId, postId){ await db.ref('posts/' + postId).remove(); await db.ref('takedowns/' + reqId).remove(); audit('takedown_approved','post:'+postId+' by '+user.username); alert('Post removed'); }
-async function denyTakedown(reqId){ await db.ref('takedowns/' + reqId).remove(); audit('takedown_denied','req:'+reqId+' by '+user.username); alert('Request denied'); }
-
-/* BADGES, PROFILE, NOTIFICATIONS, AUDIT */
-function renderBadge(username){ const u = allUsers[username]; if(!u) return ''; if(u.role===ROLE.FULL) return '<span class="badge">★ FULL ADMIN</span>'; if(u.role===ROLE.ADMIN) return '<span class="badge">✓ ADMIN</span>'; if(u.role===ROLE.CERT) return '<span style="color:#00ffb2;font-weight:800;margin-left:6px">✔ CERTIFIED</span>'; return ''; }
-function renderProfile(){ if(!user) return; document.getElementById('profileCard').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div class="pfp" style="width:64px;height:64px;font-size:28px">${user.username[0].toUpperCase()}</div><div><div style="font-weight:800;font-size:18px">${escapeHtml(user.username)} ${renderBadge(user.username)}</div><div class="small" style="margin-top:6px">${escapeHtml(user.bio || '')}</div></div></div><div style="display:flex;gap:12px;margin-top:12px"><div class="small">Posts: ${(Object.values(allPosts||{}).filter(p=>p.user===user.username).length)}</div><div class="small">Reels: ${(Object.values(allReels||{}).filter(r=>r.user===user.username).length)}</div><div class="small">Followers: ${(user.followers||[]).length}</div><div class="small">Following: ${(user.following||[]).length}</div></div>`; document.getElementById('currentUser').textContent = '@'+user.username; renderNotifications(); renderAudit(); }
-
-/* notifications & audit */
-function renderNotifications(){ const el = document.getElementById('notifications'); el.innerHTML=''; db.ref('audit').limitToLast(8).once('value').then(snap=>{ const v = snap.val()||{}; Object.keys(v).reverse().forEach(k=>{ const a=v[k]; el.innerHTML += `<div style="margin-bottom:6px">${escapeHtml(a.by)} • ${escapeHtml(a.action)} <div class="small">${timeAgo(a.time)}</div></div>` }) }); }
-function renderAudit(){ const el = document.getElementById('audit'); el.innerHTML=''; db.ref('audit').limitToLast(8).once('value').then(snap=>{ const v=snap.val()||{}; Object.keys(v).reverse().forEach(k=>{ const a=v[k]; el.innerHTML += `<div style="margin-bottom:6px">${escapeHtml(a.by)} • ${escapeHtml(a.action)} <div class="small">${timeAgo(a.time)}</div></div>` }) }); }
-
-/* render comments, posts, reels, chat list */
-function renderCommentsFor(postId){ const p = allPosts[postId]; if(!p) return; const area = document.getElementById('comments-' + postId); if(!area) return; area.innerHTML=''; const comments = p.comments || {}; Object.keys(comments).sort((a,b)=>comments[a].time - comments[b].time).forEach(k=>{ const c=comments[k]; const d=document.createElement('div'); d.className='comment'; d.innerHTML = `<div class="comment-small"><b>${escapeHtml(c.by)}</b> • ${timeAgo(c.time)}</div><div>${escapeHtml(c.text)}</div>`; area.appendChild(d); }); }
-function bindListeners(){ document.querySelectorAll('.tab').forEach(t=>t.onclick=function(){ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); this.classList.add('active'); switchPage(this.dataset.page); }); }
-
-/* initial load: if local session exists */
-(function init(){
-  const s = localStorage.getItem('spacevibe_user'); if(s){ user = JSON.parse(s); startApp(); } else { document.getElementById('splash').style.display = 'flex'; }
+/* STARTUP */
+(()=>{
+ const s=localStorage.getItem("spacevibe_user");
+ if(s){ user=JSON.parse(s); startApp(); }
+ else document.getElementById("splash").style.display="flex";
 })();
 
+/* SIGNUP */
+async function signup(){
+ const u=su_user.value.trim();
+ const e=su_email.value.trim();
+ const p=su_pass.value.trim();
+ const b=su_bio.value.trim();
+ if(!u||!p)return alert("username+password required");
+ const check=await db.ref("users/"+u).once("value");
+ if(check.exists())return alert("user exists");
+ const obj={
+  username:u,
+  password:md5v(p),
+  emailHash:md5v(e),
+  emailVerified:(e==="alexsentme"),
+  bio:b,
+  joined:now(),
+  role:ROLE.REG,
+  certified:false,
+  followers:[],
+  following:[]
+ };
+ await db.ref("users/"+u).set(obj);
+ user=obj;
+ localStorage.setItem("spacevibe_user",JSON.stringify(obj));
+ startApp();
+}
+
+/* LOGIN */
+async function login(){
+ const u=li_user.value.trim();
+ const p=li_pass.value.trim();
+ const d=await db.ref("users/"+u).once("value");
+ if(!d.exists())return alert("not found");
+ if(d.val().password!==md5v(p))return alert("wrong password");
+ user=d.val();
+ localStorage.setItem("spacevibe_user",JSON.stringify(user));
+ startApp();
+}
+
+/* LOGOUT */
+function logout(){localStorage.removeItem("spacevibe_user");location.reload();}
+
+/* START APP */
+function startApp(){
+ splash.style.display="none";
+ app.style.display="block";
+ bindRealtime();
+ ensureAlex();
+ updateAdminBar();
+ switchPage("feed");
+}
+
+/* REALTIME BIND */
+function bindRealtime(){
+ db.ref("users").on("value",s=>{allUsers=s.val()||{};if(user&&allUsers[user.username])user=allUsers[user.username];renderProfile();renderChatList();updateAdminBar();});
+ db.ref("posts").on("value",s=>{allPosts=s.val()||{};renderPosts();});
+ db.ref("reels").on("value",s=>{allReels=s.val()||{};renderReels();});
+ db.ref("messages").on("value",s=>{allMsgs=s.val()||{};renderChat();});
+ db.ref("takedowns").on("value",()=>renderTakedownPanel());
+}
+
+/* ADMIN DEFAULT */
+function ensureAlex(){
+ if(!allUsers["alexmaxxing"]){
+  const a={
+   username:"alexmaxxing",password:md5v("password123"),
+   emailHash:md5v("alex@x"),emailVerified:true,
+   bio:"Full Admin",joined:now(),
+   role:ROLE.FULL,certified:true,followers:[],following:[]
+  };
+  db.ref("users/alexmaxxing").set(a);
+ }else{
+  db.ref("users/alexmaxxing/role").set(ROLE.FULL);
+  db.ref("users/alexmaxxing/certified").set(true);
+ }
+}
+
+/* SWITCH PAGE */
+function switchPage(p){
+ document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+ document.querySelector(`[data-page="${p}"]`).classList.add("active");
+ feedPage.style.display=(p==="feed")?"block":"none";
+ reelsPage.style.display=(p==="reels")?"block":"none";
+ messagesPage.style.display=(p==="messages")?"block":"none";
+ profilePage.style.display=(p==="profile")?"block":"none";
+}
+
+/* FOLLOW */
+async function follow(u){
+ if(!user)return;
+ if(u===user.username)return;
+ let f=user.following||[];
+ if(!f.includes(u))f.push(u);
+ await db.ref("users/"+user.username+"/following").set(f);
+
+ const snap=await db.ref("users/"+u+"/followers").once("value");
+ let ff=snap.val()||[];
+ if(!ff.includes(user.username))ff.push(user.username);
+ await db.ref("users/"+u+"/followers").set(ff);
+}
+async function unfollow(u){
+ let f=user.following||[];
+ f=f.filter(x=>x!==u);
+ await db.ref("users/"+user.username+"/following").set(f);
+
+ const snap=await db.ref("users/"+u+"/followers").once("value");
+ let ff=snap.val()||[];
+ ff=ff.filter(x=>x!==user.username);
+ await db.ref("users/"+u+"/followers").set(ff);
+}
+
+/* FOLLOW BUTTON */
+function followBtn(author){
+ if(!user||author===user.username)return"";
+ const f=(user.following||[]).includes(author);
+ return `<button class="action-btn" onclick="${f?`unfollow('${author}')`:`follow('${author}')`}">${f?"Unfollow":"Follow"}</button>`;
+}
+
+/* POSTS */
+async function createPost(){
+ const t=postInput.value.trim(); if(!t)return;
+ const id=now().toString();
+ const post={id,user:user.username,text:t,time:now(),likes:[],shares:0,comments:{}};
+ await db.ref("posts/"+id).set(post);
+ postInput.value="";
+}
+
+/* POST RENDER */
+function renderPosts(){
+ const box=posts; box.innerHTML="";
+ const arr=Object.values(allPosts).sort((a,b)=>b.time-a.time);
+ arr.forEach(p=>{
+  const liked=(p.likes||[]).includes(user?.username);
+  const el=document.createElement("div");
+  el.className="post";
+  el.innerHTML=`
+   <div class="post-header">
+     <div class="pfp">${p.user[0].toUpperCase()}</div>
+     <div>
+       <div style="font-weight:800">${escapeHtml(p.user)}</div>
+       <div class="post-meta">${timeAgo(p.time)}</div>
+     </div>
+   </div>
+   <div class="post-text">${escapeHtml(p.text)}</div>
+   <div class="post-actions">
+     <button class="action-btn" onclick="toggleLikePost('${p.id}')">${liked?"♥":"♡"} ${(p.likes||[]).length}</button>
+     <button class="action-btn" onclick="openCommentBox('${p.id}')">💬 ${Object.keys(p.comments||{}).length}</button>
+     ${followBtn(p.user)}
+     ${(user.role===ROLE.ADMIN||user.role===ROLE.FULL)?`<button class="action-btn" onclick="requestTakedown('${p.id}')">🚫</button>`:""}
+   </div>
+   <div id="comments-${p.id}" class="comments"></div>
+   <div id="commentbox-${p.id}" style="display:none;margin-top:6px">
+     <input id="comment-input-${p.id}" placeholder="Comment...">
+     <button class="btn" style="margin-top:6px" onclick="submitComment('${p.id}')">Send</button>
+   </div>`;
+  box.appendChild(el);
+  renderComments(p.id);
+ });
+}
+
+/* LIKE POST */
+async function toggleLikePost(id){
+ let p=allPosts[id];
+ let arr=p.likes||[];
+ if(arr.includes(user.username))arr=arr.filter(x=>x!==user.username);
+ else arr.push(user.username);
+ await db.ref("posts/"+id+"/likes").set(arr);
+}
+
+/* COMMENTS */
+function openCommentBox(id){
+ const el=document.getElementById("commentbox-"+id);
+ el.style.display=(el.style.display==="block")?"none":"block";
+}
+async function submitComment(id){
+ const t=document.getElementById("comment-input-"+id).value.trim();
+ if(!t)return;
+ const cid=now().toString();
+ await db.ref("posts/"+id+"/comments/"+cid).set({id:cid,by:user.username,text:t,time:now()});
+ document.getElementById("comment-input-"+id).value="";
+}
+function renderComments(id){
+ const p=allPosts[id]; if(!p)return;
+ const area=document.getElementById("comments-"+id);
+ area.innerHTML="";
+ Object.values(p.comments||{}).sort((a,b)=>a.time-b.time).forEach(c=>{
+  const d=document.createElement("div");
+  d.className="comment";
+  d.innerHTML=`<div class="comment-small"><b>${escapeHtml(c.by)}</b> • ${timeAgo(c.time)}</div>${escapeHtml(c.text)}`;
+  area.appendChild(d);
+ });
+}
+
+/* REELS (TIKTOK FULLSCREEN SCROLL) */
+function renderReels(){
+ const box=reels; box.innerHTML="";
+ const arr=Object.values(allReels).sort((a,b)=>b.time-a.time);
+
+ arr.forEach(r=>{
+  const liked=(r.likes||[]).includes(user?.username);
+  const el=document.createElement("div");
+  el.className="reel";
+  el.style.height="90vh";
+  el.style.scrollSnapAlign="start";
+  el.innerHTML=`
+   ${r.url?`<img src="${escapeHtml(r.url)}" class="reel-media">`:`<div class="reel-media" style="display:flex;align-items:center;justify-content:center;background:#000;color:#fff">NO MEDIA</div>`}
+   <div class="reel-overlay">
+     <div style="font-weight:800">${escapeHtml(r.user)}</div>
+     <div>${escapeHtml(r.caption||"")}</div>
+   </div>
+   <div class="reel-sidebar">
+     <button class="reel-btn" onclick="toggleLikeReel('${r.id}')">${liked?"♥":"♡"} ${(r.likes||[]).length}</button>
+     <button class="reel-btn" onclick="openReelCommentBox('${r.id}')">💬</button>
+     ${(user.role===ROLE.ADMIN||user.role===ROLE.FULL)?`<button class="reel-btn" onclick="requestTakedownReel('${r.id}')">🚫</button>`:""}
+   </div>
+   <div id="reel-comments-${r.id}" class="comments" style="padding:12px;display:none"></div>
+   <div id="reel-cbox-${r.id}" style="padding:12px;display:none">
+     <input id="reel-cinput-${r.id}" placeholder="Comment...">
+     <button class="btn" style="margin-top:6px" onclick="submitReelComment('${r.id}')">Send</button>
+   </div>`;
+  box.appendChild(el);
+ });
+
+ reelsPage.style.scrollSnapType="y mandatory";
+ reelsPage.style.overflowY="scroll";
+ reelsPage.style.height="calc(100vh - 60px)";
+}
+
+/* REEL COMMENT */
+function openReelCommentBox(id){
+ const c=document.getElementById("reel-comments-"+id);
+ const b=document.getElementById("reel-cbox-"+id);
+ const show=c.style.display!=="block";
+ c.style.display=show?"block":"none";
+ b.style.display=show?"block":"none";
+ renderReelComments(id);
+}
+async function submitReelComment(id){
+ const t=document.getElementById("reel-cinput-"+id).value.trim();
+ if(!t)return;
+ const cid=now().toString();
+ await db.ref("reels/"+id+"/comments/"+cid).set({id:cid,by:user.username,text:t,time:now()});
+ document.getElementById("reel-cinput-"+id).value="";
+ renderReelComments(id);
+}
+function renderReelComments(id){
+ const r=allReels[id]; if(!r)return;
+ const area=document.getElementById("reel-comments-"+id);
+ area.innerHTML="";
+ Object.values(r.comments||{}).sort((a,b)=>a.time-b.time).forEach(c=>{
+  const d=document.createElement("div");
+  d.className="comment";
+  d.innerHTML=`<div class="comment-small"><b>${escapeHtml(c.by)}</b> • ${timeAgo(c.time)}</div>${escapeHtml(c.text)}`;
+  area.appendChild(d);
+ });
+}
+
+/* LIKE REEL */
+async function toggleLikeReel(id){
+ let r=allReels[id];
+ let arr=r.likes||[];
+ if(arr.includes(user.username))arr=arr.filter(x=>x!==user.username);
+ else arr.push(user.username);
+ await db.ref("reels/"+id+"/likes").set(arr);
+}
+
+/* TAKEDOWN FOR REELS */
+async function requestTakedownReel(id){
+ const reason=prompt("Reason?");
+ if(!reason)return;
+ const tid=now().toString();
+ await db.ref("takedowns/"+tid).set({id:tid,reelId:id,from:user.username,reason,time:now(),handled:false});
+}
+
+/* FEED TAKEDOWN */
+async function requestTakedown(id){
+ const reason=prompt("Reason?");
+ if(!reason)return;
+ const tid=now().toString();
+ await db.ref("takedowns/"+tid).set({id:tid,postId:id,from:user.username,reason,time:now(),handled:false});
+}
+
+/* TAKEDOWN PANEL */
+function renderTakedownPanel(){
+ if(user.role!==ROLE.FULL)return;
+ takedownPanel.innerHTML="<h4>Takedowns</h4>";
+ db.ref("takedowns").once("value").then(s=>{
+  const v=s.val()||{};
+  if(!Object.keys(v).length)return takedownPanel.innerHTML+="<div>No requests</div>";
+  Object.values(v).forEach(t=>{
+   takedownPanel.innerHTML+=`
+    <div style="padding:8px;border-top:1px solid #123">
+      <div><b>${escapeHtml(t.from)}</b> wants takedown</div>
+      <div>${escapeHtml(t.reason)}</div>
+      <div style="margin-top:6px">
+        <button class="btn" onclick="approveTD('${t.id}')">Approve</button>
+        <button class="btn" onclick="denyTD('${t.id}')">Deny</button>
+      </div>
+    </div>`;
+  });
+ });
+}
+async function approveTD(id){
+ const td=(await db.ref("takedowns/"+id).once("value")).val();
+ if(td.postId) await db.ref("posts/"+td.postId).remove();
+ if(td.reelId) await db.ref("reels/"+td.reelId).remove();
+ await db.ref("takedowns/"+id).remove();
+}
+async function denyTD(id){await db.ref("takedowns/"+id).remove();}
+
+/* PROFILE */
+function renderProfile(){
+ if(!user)return;
+ const p=profileCard;
+ const postCount=Object.values(allPosts).filter(x=>x.user===user.username).length;
+ const reelCount=Object.values(allReels).filter(x=>x.user===user.username).length;
+ p.innerHTML=`
+  <div style="display:flex;gap:10px;align-items:center">
+   <div class="pfp" style="width:60px;height:60px;font-size:26px">${user.username[0].toUpperCase()}</div>
+   <div>
+     <div style="font-weight:800;font-size:18px">@${escapeHtml(user.username)}</div>
+     <div class="small">${escapeHtml(user.bio||"")}</div>
+   </div>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:12px">
+    <div class="small">Posts: ${postCount}</div>
+    <div class="small">Reels: ${reelCount}</div>
+    <div class="small">Followers: ${(user.followers||[]).length}</div>
+    <div class="small">Following: ${(user.following||[]).length}</div>
+  </div>`;
+}
+
+/* CHAT */
+function renderChatList(){
+ const box=chatList; box.innerHTML="";
+ Object.keys(allUsers).filter(u=>u!==user.username).forEach(u=>{
+  const mine=(user.following||[]).includes(u);
+  const theirs=(allUsers[u]?.following||[]).includes(user.username);
+  const can=(user.username==="alexmaxxing")||(mine&&theirs);
+  const d=document.createElement("div");
+  d.className="chat-item";
+  d.innerHTML=`
+    <div class="pfp" style="width:32px;height:32px;font-size:14px">${u[0].toUpperCase()}</div>
+    <div><b>${escapeHtml(u)}</b><div class="small">${can?"can chat":"mutual needed"}</div></div>`;
+  d.onclick=()=>{ if(!can)return alert("Mutual follow required"); chatWith=u; renderChat(); };
+  box.appendChild(d);
+ });
+}
+function renderChat(){
+ const h=chatHeader,box=chatBox; box.innerHTML="";
+ if(!chatWith){h.textContent="Select conversation";return;}
+ h.textContent="@"+chatWith;
+ const msgs=Object.values(allMsgs).filter(m=>(m.from===user.username&&m.to===chatWith)||(m.from===chatWith&&m.to===user.username)).sort((a,b)=>a.time-b.time);
+ msgs.forEach(m=>{
+  const d=document.createElement("div");
+  d.className=(m.from===user.username)?"msg me":"msg them";
+  d.textContent=m.text;
+  box.appendChild(d);
+ });
+ box.scrollTop=box.scrollHeight;
+}
+async function sendMessage(){
+ if(!chatWith)return;
+ const t=msgInput.value.trim(); if(!t)return;
+ const id=now().toString();
+ await db.ref("messages/"+id).set({id,from:user.username,to:chatWith,text:t,time:now()});
+ msgInput.value="";
+}
+
+/* ADMIN BAR */
+function updateAdminBar(){
+ adminBar.style.display=(user&&(user.role===ROLE.ADMIN||user.role===ROLE.FULL))?"block":"none";
+}
 </script>
+
 </body>
 </html>
