@@ -1,568 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>SpaceVibe by AlexNET</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SpaceVibe by AlexNET | Home</title>
 
-<!-- md5 lib -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+  <!-- MD5 lib -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
 
-<!-- firebase compat -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-<!-- Minified CSS, grouped by component (one line per group) -->
-<style>
-/* global */body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#071424;color:#e6f0f8}h1,h2,h3,h4,h5{margin:0}a{color:inherit;text-decoration:none}button{cursor:pointer}
-/* splash/auth */#splash{display:flex;height:100vh;align-items:center;justify-content:center;background:linear-gradient(135deg,#071424,#081a32)}.card{background:#0e1726;border:1px solid #16263a;border-radius:12px;padding:18px;width:380px}input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #163043;background:#071425;color:#e6f0f8;margin-top:8px}textarea{resize:vertical} .btn{background:#00d9ff;border:none;color:#041c27;padding:10px 12px;border-radius:10px;font-weight:700;margin-top:8px;width:100%}
-/* topbar */#appTop{position:sticky;top:0;background:#071525;border-bottom:1px solid #122233;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;z-index:60}#tabs{display:flex;gap:8px} .tab{background:transparent;border:none;color:#9fb8cf;padding:8px 10px;border-radius:8px} .tab.active{background:#00d9ff;color:#04202a;font-weight:800}
-/* adminbar */#adminBar{display:none;background:#071a2a;padding:8px;border-top:1px solid #122233;border-bottom:1px solid #122233}#adminBar .admin-btn{background:#00d9ff;border:none;color:#04202a;padding:8px 10px;border-radius:8px;font-weight:700;margin-right:8px}
-/* layout */.wrap{max-width:1200px;margin:18px auto;padding:0 12px} .columns{display:flex;gap:18px} .col{flex:1}.sidebar{width:300px}
-/* post */.composer{background:#0b1630;border:1px solid #13263a;padding:14px;border-radius:10px;margin-bottom:14px}.post{background:#0b1628;border:1px solid #122433;border-radius:10px;padding:12px;margin-bottom:12px}.post-header{display:flex;align-items:center;gap:12px}.pfp{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#00d9ff,#667eea);color:#02202a;font-weight:800}.post-meta{color:#9fb8cf;font-size:13px}.post-text{margin-top:10px;white-space:pre-wrap}.post-actions{display:flex;gap:12px;margin-top:8px}.action-btn{background:none;border:none;color:#9fb8cf;font-size:14px}
-/* comments */.comments{margin-top:10px}.comment{background:#071726;border:1px solid #0f2a3e;padding:8px;border-radius:8px;margin-top:8px;color:#cfe8f7}.comment-small{font-size:12px;color:#9fb8cf;margin-bottom:6px}
-/* reels (tiktok style) */#reelsPage{display:none}.reel{background:#000;border-radius:12px;overflow:hidden;border:1px solid #0f2636;margin-bottom:16px;position:relative}.reel-media{width:100%;max-height:72vh;object-fit:cover;display:block}.reel-overlay{position:absolute;left:12px;bottom:12px;right:12px;color:#fff}.reel-sidebar{position:absolute;right:12px;bottom:80px;display:flex;flex-direction:column;gap:12px}.reel-btn{width:56px;height:56px;border-radius:999px;border:none;background:rgba(255,255,255,0.08);color:#fff;font-size:18px}
-/* messages */#messagesPage{display:none}.chat-list{background:#071726;border:1px solid #0e2a3f;border-radius:10px;padding:10px;max-height:420px;overflow:auto}.chat-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer}.chat-item:hover{background:#071a2e}.chat-window{background:#0b1628;border:1px solid #122433;border-radius:10px;padding:10px;display:flex;flex-direction:column;height:420px}.msg.me{align-self:flex-end;background:#00d9ff;color:#041c24;padding:8px;border-radius:10px;margin:6px 0}.msg.them{align-self:flex-start;background:#071726;color:#e6f0f8;padding:8px;border-radius:10px;margin:6px 0}
-/* profile */#profilePage{display:none}.profile-card{background:#0b1628;border:1px solid #122433;border-radius:10px;padding:12px}.small{font-size:13px;color:#9fb8cf}.badge{color:#00d9ff;font-weight:800;margin-left:8px}
-/* admin panels */#adminPanel,#takedownPanel{display:none;background:#071726;border:1px solid #0f2a3e;padding:12px;border-radius:10px;margin-top:12px}
-/* responsive */@media(max-width:900px){.columns{flex-direction:column}.sidebar{width:100%}}
-</style>
+  <style>
+    /* Simple, compact, readable styling — "Neon Dark Pro" splash */
+    :root{--bg:#071426;--card:#0e1726;--accent:#00d9ff;--muted:#9fbfd6;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:#e6f7ff;min-height:100vh;display:flex;align-items:center;justify-content:center}
+    .card{width:360px;background:linear-gradient(180deg,#071725,#08192f);border-radius:12px;padding:20px;border:1px solid var(--glass);box-shadow:0 6px 24px rgba(0,0,0,0.5)}
+    h1{margin:0 0 6px 0;color:var(--accent);font-size:20px}
+    p.lead{margin:0 0 14px 0;color:var(--muted)}
+    input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;margin-top:8px}
+    .btn{width:100%;padding:10px;border-radius:10px;border:none;background:var(--accent);color:#002026;font-weight:800;margin-top:10px;cursor:pointer}
+    .row{display:flex;gap:8px;margin-top:10px}
+    .small{font-size:13px;color:var(--muted)}
+    .oauth{display:flex;gap:8px}
+    .linkbar{display:flex;gap:8px;justify-content:center;margin-top:12px}
+    a.link{color:var(--accent);text-decoration:none;font-weight:700}
+    footer{margin-top:10px;text-align:center;color:var(--muted);font-size:12px}
+  </style>
 </head>
 <body>
+  <div class="card" id="splashCard">
+    <h1>SpaceVibe</h1>
+    <p class="lead">The Space that is your Vibe</p>
 
-<!-- SPLASH -->
-<div id="splash">
-  <div class="card">
-    <h2>SpaceVibe</h2>
-    <p style="color:#9fb8cf;margin-top:6px">A small social demo — sign up or log in</p>
-
-    <h4 style="margin-top:12px">Sign Up</h4>
-    <input id="su_user" placeholder="username" />
-    <input id="su_email" placeholder="email (enter exactly alexsentme to auto-verify)" />
-    <input id="su_pass" type="password" placeholder="password" />
-    <textarea id="su_bio" rows="2" placeholder="bio (optional)"></textarea>
-    <button class="btn" onclick="signup()">Create account</button>
-
-    <h4 style="margin-top:12px">Log In</h4>
-    <input id="li_user" placeholder="username" />
-    <input id="li_pass" type="password" placeholder="password" />
-    <button class="btn" onclick="login()">Login</button>
-  </div>
-</div>
-
-<!-- APP -->
-<div id="app" style="display:none">
-  <div id="appTop">
-    <div id="leftTop" style="display:flex;align-items:center;gap:12px">
-      <h3 style="color:#00d9ff;margin:0">SpaceVibe</h3>
-      <div id="tabs">
-        <button class="tab active" data-page="feed" onclick="switchPage('feed')">Feed</button>
-        <button class="tab" data-page="reels" onclick="switchPage('reels')">Reels</button>
-        <button class="tab" data-page="messages" onclick="switchPage('messages')">Messages</button>
-        <button class="tab" data-page="profile" onclick="switchPage('profile')">Profile</button>
-      </div>
+    <div id="entryButtons" style="margin-bottom:12px">
+      <button class="btn" onclick="showLogin()">Log in</button>
+      <button class="btn" onclick="showSignup()" style="background:transparent;color:var(--accent);border:1px solid var(--glass)">Create account</button>
     </div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div id="currentUser" class="small"></div>
-      <button class="btn" onclick="logout()" style="width:auto">Logout</button>
-    </div>
-  </div>
 
-  <div id="adminBar">
-    <button class="admin-btn" onclick="toggleAdminPanel()">Admin Panel</button>
-    <button class="admin-btn" onclick="toggleTakedowns()">Takedown Inbox</button>
-  </div>
-
-  <div class="wrap">
-    <div class="columns">
-      <div class="col">
-
-        <!-- FEED -->
-        <div id="feedPage">
-          <div class="composer">
-            <textarea id="postInput" rows="3" placeholder="What's happening?"></textarea>
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button class="btn" onclick="createPost()" style="width:120px">Post</button>
-              <button class="btn" onclick="openReelUploader()" style="width:140px">Upload Reel</button>
-            </div>
-          </div>
-          <div id="posts"></div>
-        </div>
-
-        <!-- REELS -->
-        <div id="reelsPage" style="display:none">
-          <div id="reelUploader" class="composer" style="display:none">
-            <input id="reel_input_url" placeholder="image/video URL (or leave blank to use placeholder)" />
-            <textarea id="reel_input_caption" rows="2" placeholder="caption..."></textarea>
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button class="btn" onclick="uploadReel()">Upload</button>
-              <button class="btn" onclick="hideReelUploader()">Cancel</button>
-            </div>
-          </div>
-          <div id="reels"></div>
-        </div>
-
-        <!-- MESSAGES -->
-        <div id="messagesPage" style="display:none">
-          <div style="display:flex;gap:12px">
-            <div class="sidebar">
-              <div class="chat-list" id="chatList"></div>
-            </div>
-            <div style="flex:1">
-              <div class="chat-window">
-                <div id="chatHeader" class="small" style="margin-bottom:8px">Select a conversation</div>
-                <div id="chatBox" style="flex:1;overflow:auto;padding:6px;border-radius:8px"></div>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                  <input id="msgInput" placeholder="Message..." />
-                  <button class="btn" onclick="sendMessage()" style="width:auto">Send</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PROFILE -->
-        <div id="profilePage" style="display:none">
-          <div class="profile-card" id="profileCard"></div>
-        </div>
-
-        <!-- ADMIN PANELS -->
-        <div id="adminPanel"></div>
-        <div id="takedownPanel"></div>
-
+    <div id="authArea" style="display:none">
+      <!-- Signup -->
+      <div id="signupBox" style="display:none">
+        <div class="small">Create account</div>
+        <input id="su_user" placeholder="username" />
+        <input id="su_email" placeholder="email (enter exactly alexsentme to auto-verify)" />
+        <input id="su_pass" type="password" placeholder="password" />
+        <textarea id="su_bio" rows="2" placeholder="bio (optional)"></textarea>
+        <button class="btn" onclick="signup()">Sign up</button>
+        <div class="linkbar"><a class="link" href="#" onclick="showLogin()">Already have an account?</a></div>
       </div>
 
-      <!-- RIGHT SIDEBAR -->
-      <div class="sidebar">
-        <div class="post" style="margin-bottom:12px">
-          <h4>Notifications</h4>
-          <div id="notifications" class="small" style="margin-top:8px"></div>
-        </div>
-        <div class="post">
-          <h4>Audit</h4>
-          <div id="audit" class="small" style="margin-top:8px"></div>
-        </div>
+      <!-- Login -->
+      <div id="loginBox" style="display:none">
+        <div class="small">Log in</div>
+        <input id="li_user" placeholder="username" />
+        <input id="li_pass" type="password" placeholder="password" />
+        <button class="btn" onclick="login()">Log in</button>
+        <div class="linkbar"><a class="link" href="#" onclick="showSignup()">Create an account</a></div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- minimal icons (text-based) -->
+    <footer>SpaceVibe by AlexNET</footer>
+  </div>
+
 <script>
-/* FIREBASE INIT */
-const firebaseConfig={
- apiKey:"AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
- authDomain:"spacevibe-backend.firebaseapp.com",
- databaseURL:"https://spacevibe-backend-default-rtdb.firebaseio.com",
- projectId:"spacevibe-backend",
- storageBucket:"spacevibe-backend.firebasestorage.app",
- messagingSenderId:"258209625594",
- appId:"1:258209625594:web:a21c48b7e7100462012043"
+/* ---------- Firebase config (reuse same project) ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
+  authDomain: "spacevibe-backend.firebaseapp.com",
+  databaseURL: "https://spacevibe-backend-default-rtdb.firebaseio.com",
+  projectId: "spacevibe-backend",
+  storageBucket: "spacevibe-backend.firebasestorage.app",
+  messagingSenderId: "258209625594",
+  appId: "1:258209625594:web:a21c48b7e7100462012043"
 };
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+const db = firebase.database();
 
-/* GLOBAL */
-let user=null;
-let allUsers={},allPosts={},allReels={},allMsgs={};
-let chatWith=null;
+/* ---------- helpers ---------- */
+function md5v(s){ try{ return md5(String(s||"")) }catch(e){ return String(s||"") } }
+function now(){ return Date.now() }
 
-/* CONSTANTS */
-const ROLE={FULL:"full-admin",ADMIN:"admin",CERT:"certified",REG:"regular"};
-const md5v=v=>md5(String(v||""));
-
-/* UTIL */
-const escapeHtml=s=>String(s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-const now=()=>Date.now();
-const timeAgo=t=>{
- const s=Math.floor((Date.now()-t)/1000);
- if(s<60)return"just now";
- const m=Math.floor(s/60);if(m<60)return m+"m ago";
- const h=Math.floor(m/60);if(h<24)return h+"h ago";
- const d=Math.floor(h/24);return d+"d ago";
-};
-
-/* STARTUP */
-(()=>{
- const s=localStorage.getItem("spacevibe_user");
- if(s){ user=JSON.parse(s); startApp(); }
- else document.getElementById("splash").style.display="flex";
+/* ---------- session redirect ---------- */
+(function(){
+  const s = localStorage.getItem('sv_user');
+  if(s){
+    // already signed in -> go to home
+    window.location.href = 'home.html';
+  } else {
+    // show main splash controls (already shown)
+  }
 })();
 
-/* SIGNUP */
+/* ---------- UI controls ---------- */
+function showLogin(){ document.getElementById('authArea').style.display='block'; document.getElementById('entryButtons').style.display='none'; document.getElementById('loginBox').style.display='block'; document.getElementById('signupBox').style.display='none' }
+function showSignup(){ document.getElementById('authArea').style.display='block'; document.getElementById('entryButtons').style.display='none'; document.getElementById('signupBox').style.display='block'; document.getElementById('loginBox').style.display='none' }
+
+/* ---------- auth flows (custom) ---------- */
 async function signup(){
- const u=su_user.value.trim();
- const e=su_email.value.trim();
- const p=su_pass.value.trim();
- const b=su_bio.value.trim();
- if(!u||!p)return alert("username+password required");
- const check=await db.ref("users/"+u).once("value");
- if(check.exists())return alert("user exists");
- const obj={
-  username:u,
-  password:md5v(p),
-  emailHash:md5v(e),
-  emailVerified:(e==="alexsentme"),
-  bio:b,
-  joined:now(),
-  role:ROLE.REG,
-  certified:false,
-  followers:[],
-  following:[]
- };
- await db.ref("users/"+u).set(obj);
- user=obj;
- localStorage.setItem("spacevibe_user",JSON.stringify(obj));
- startApp();
-}
-
-/* LOGIN */
-async function login(){
- const u=li_user.value.trim();
- const p=li_pass.value.trim();
- const d=await db.ref("users/"+u).once("value");
- if(!d.exists())return alert("not found");
- if(d.val().password!==md5v(p))return alert("wrong password");
- user=d.val();
- localStorage.setItem("spacevibe_user",JSON.stringify(user));
- startApp();
-}
-
-/* LOGOUT */
-function logout(){localStorage.removeItem("spacevibe_user");location.reload();}
-
-/* START APP */
-function startApp(){
- splash.style.display="none";
- app.style.display="block";
- bindRealtime();
- ensureAlex();
- updateAdminBar();
- switchPage("feed");
-}
-
-/* REALTIME BIND */
-function bindRealtime(){
- db.ref("users").on("value",s=>{allUsers=s.val()||{};if(user&&allUsers[user.username])user=allUsers[user.username];renderProfile();renderChatList();updateAdminBar();});
- db.ref("posts").on("value",s=>{allPosts=s.val()||{};renderPosts();});
- db.ref("reels").on("value",s=>{allReels=s.val()||{};renderReels();});
- db.ref("messages").on("value",s=>{allMsgs=s.val()||{};renderChat();});
- db.ref("takedowns").on("value",()=>renderTakedownPanel());
-}
-
-/* ADMIN DEFAULT */
-function ensureAlex(){
- if(!allUsers["alexmaxxing"]){
-  const a={
-   username:"alexmaxxing",password:md5v("password123"),
-   emailHash:md5v("alex@x"),emailVerified:true,
-   bio:"Full Admin",joined:now(),
-   role:ROLE.FULL,certified:true,followers:[],following:[]
+  const username = document.getElementById('su_user').value.trim();
+  const email = document.getElementById('su_email').value.trim();
+  const pass = document.getElementById('su_pass').value;
+  const bio = document.getElementById('su_bio').value.trim();
+  if(!username || !pass){ alert('username & password required'); return; }
+  const snap = await db.ref('users/' + username).once('value');
+  if(snap.exists()){ alert('username taken'); return; }
+  const emailHash = md5v(email || '');
+  const emailVerified = (email === 'alexsentme');
+  const profile = {
+    username,
+    password: md5v(pass),
+    emailHash,
+    emailVerified,
+    bio,
+    joined: now(),
+    role: 'regular',
+    certified: false,
+    pfp: null,
+    theme: 'neon-dark',
+    followers: [],
+    following: []
   };
-  db.ref("users/alexmaxxing").set(a);
- }else{
-  db.ref("users/alexmaxxing/role").set(ROLE.FULL);
-  db.ref("users/alexmaxxing/certified").set(true);
- }
+  await db.ref('users/' + username).set(profile);
+  localStorage.setItem('sv_user', JSON.stringify(profile));
+  window.location.href = 'home.html';
 }
 
-/* SWITCH PAGE */
-function switchPage(p){
- document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- document.querySelector(`[data-page="${p}"]`).classList.add("active");
- feedPage.style.display=(p==="feed")?"block":"none";
- reelsPage.style.display=(p==="reels")?"block":"none";
- messagesPage.style.display=(p==="messages")?"block":"none";
- profilePage.style.display=(p==="profile")?"block":"none";
-}
-
-/* FOLLOW */
-async function follow(u){
- if(!user)return;
- if(u===user.username)return;
- let f=user.following||[];
- if(!f.includes(u))f.push(u);
- await db.ref("users/"+user.username+"/following").set(f);
-
- const snap=await db.ref("users/"+u+"/followers").once("value");
- let ff=snap.val()||[];
- if(!ff.includes(user.username))ff.push(user.username);
- await db.ref("users/"+u+"/followers").set(ff);
-}
-async function unfollow(u){
- let f=user.following||[];
- f=f.filter(x=>x!==u);
- await db.ref("users/"+user.username+"/following").set(f);
-
- const snap=await db.ref("users/"+u+"/followers").once("value");
- let ff=snap.val()||[];
- ff=ff.filter(x=>x!==user.username);
- await db.ref("users/"+u+"/followers").set(ff);
-}
-
-/* FOLLOW BUTTON */
-function followBtn(author){
- if(!user||author===user.username)return"";
- const f=(user.following||[]).includes(author);
- return `<button class="action-btn" onclick="${f?`unfollow('${author}')`:`follow('${author}')`}">${f?"Unfollow":"Follow"}</button>`;
-}
-
-/* POSTS */
-async function createPost(){
- const t=postInput.value.trim(); if(!t)return;
- const id=now().toString();
- const post={id,user:user.username,text:t,time:now(),likes:[],shares:0,comments:{}};
- await db.ref("posts/"+id).set(post);
- postInput.value="";
-}
-
-/* POST RENDER */
-function renderPosts(){
- const box=posts; box.innerHTML="";
- const arr=Object.values(allPosts).sort((a,b)=>b.time-a.time);
- arr.forEach(p=>{
-  const liked=(p.likes||[]).includes(user?.username);
-  const el=document.createElement("div");
-  el.className="post";
-  el.innerHTML=`
-   <div class="post-header">
-     <div class="pfp">${p.user[0].toUpperCase()}</div>
-     <div>
-       <div style="font-weight:800">${escapeHtml(p.user)}</div>
-       <div class="post-meta">${timeAgo(p.time)}</div>
-     </div>
-   </div>
-   <div class="post-text">${escapeHtml(p.text)}</div>
-   <div class="post-actions">
-     <button class="action-btn" onclick="toggleLikePost('${p.id}')">${liked?"♥":"♡"} ${(p.likes||[]).length}</button>
-     <button class="action-btn" onclick="openCommentBox('${p.id}')">💬 ${Object.keys(p.comments||{}).length}</button>
-     ${followBtn(p.user)}
-     ${(user.role===ROLE.ADMIN||user.role===ROLE.FULL)?`<button class="action-btn" onclick="requestTakedown('${p.id}')">🚫</button>`:""}
-   </div>
-   <div id="comments-${p.id}" class="comments"></div>
-   <div id="commentbox-${p.id}" style="display:none;margin-top:6px">
-     <input id="comment-input-${p.id}" placeholder="Comment...">
-     <button class="btn" style="margin-top:6px" onclick="submitComment('${p.id}')">Send</button>
-   </div>`;
-  box.appendChild(el);
-  renderComments(p.id);
- });
-}
-
-/* LIKE POST */
-async function toggleLikePost(id){
- let p=allPosts[id];
- let arr=p.likes||[];
- if(arr.includes(user.username))arr=arr.filter(x=>x!==user.username);
- else arr.push(user.username);
- await db.ref("posts/"+id+"/likes").set(arr);
-}
-
-/* COMMENTS */
-function openCommentBox(id){
- const el=document.getElementById("commentbox-"+id);
- el.style.display=(el.style.display==="block")?"none":"block";
-}
-async function submitComment(id){
- const t=document.getElementById("comment-input-"+id).value.trim();
- if(!t)return;
- const cid=now().toString();
- await db.ref("posts/"+id+"/comments/"+cid).set({id:cid,by:user.username,text:t,time:now()});
- document.getElementById("comment-input-"+id).value="";
-}
-function renderComments(id){
- const p=allPosts[id]; if(!p)return;
- const area=document.getElementById("comments-"+id);
- area.innerHTML="";
- Object.values(p.comments||{}).sort((a,b)=>a.time-b.time).forEach(c=>{
-  const d=document.createElement("div");
-  d.className="comment";
-  d.innerHTML=`<div class="comment-small"><b>${escapeHtml(c.by)}</b> • ${timeAgo(c.time)}</div>${escapeHtml(c.text)}`;
-  area.appendChild(d);
- });
-}
-
-/* REELS (TIKTOK FULLSCREEN SCROLL) */
-function renderReels(){
- const box=reels; box.innerHTML="";
- const arr=Object.values(allReels).sort((a,b)=>b.time-a.time);
-
- arr.forEach(r=>{
-  const liked=(r.likes||[]).includes(user?.username);
-  const el=document.createElement("div");
-  el.className="reel";
-  el.style.height="90vh";
-  el.style.scrollSnapAlign="start";
-  el.innerHTML=`
-   ${r.url?`<img src="${escapeHtml(r.url)}" class="reel-media">`:`<div class="reel-media" style="display:flex;align-items:center;justify-content:center;background:#000;color:#fff">NO MEDIA</div>`}
-   <div class="reel-overlay">
-     <div style="font-weight:800">${escapeHtml(r.user)}</div>
-     <div>${escapeHtml(r.caption||"")}</div>
-   </div>
-   <div class="reel-sidebar">
-     <button class="reel-btn" onclick="toggleLikeReel('${r.id}')">${liked?"♥":"♡"} ${(r.likes||[]).length}</button>
-     <button class="reel-btn" onclick="openReelCommentBox('${r.id}')">💬</button>
-     ${(user.role===ROLE.ADMIN||user.role===ROLE.FULL)?`<button class="reel-btn" onclick="requestTakedownReel('${r.id}')">🚫</button>`:""}
-   </div>
-   <div id="reel-comments-${r.id}" class="comments" style="padding:12px;display:none"></div>
-   <div id="reel-cbox-${r.id}" style="padding:12px;display:none">
-     <input id="reel-cinput-${r.id}" placeholder="Comment...">
-     <button class="btn" style="margin-top:6px" onclick="submitReelComment('${r.id}')">Send</button>
-   </div>`;
-  box.appendChild(el);
- });
-
- reelsPage.style.scrollSnapType="y mandatory";
- reelsPage.style.overflowY="scroll";
- reelsPage.style.height="calc(100vh - 60px)";
-}
-
-/* REEL COMMENT */
-function openReelCommentBox(id){
- const c=document.getElementById("reel-comments-"+id);
- const b=document.getElementById("reel-cbox-"+id);
- const show=c.style.display!=="block";
- c.style.display=show?"block":"none";
- b.style.display=show?"block":"none";
- renderReelComments(id);
-}
-async function submitReelComment(id){
- const t=document.getElementById("reel-cinput-"+id).value.trim();
- if(!t)return;
- const cid=now().toString();
- await db.ref("reels/"+id+"/comments/"+cid).set({id:cid,by:user.username,text:t,time:now()});
- document.getElementById("reel-cinput-"+id).value="";
- renderReelComments(id);
-}
-function renderReelComments(id){
- const r=allReels[id]; if(!r)return;
- const area=document.getElementById("reel-comments-"+id);
- area.innerHTML="";
- Object.values(r.comments||{}).sort((a,b)=>a.time-b.time).forEach(c=>{
-  const d=document.createElement("div");
-  d.className="comment";
-  d.innerHTML=`<div class="comment-small"><b>${escapeHtml(c.by)}</b> • ${timeAgo(c.time)}</div>${escapeHtml(c.text)}`;
-  area.appendChild(d);
- });
-}
-
-/* LIKE REEL */
-async function toggleLikeReel(id){
- let r=allReels[id];
- let arr=r.likes||[];
- if(arr.includes(user.username))arr=arr.filter(x=>x!==user.username);
- else arr.push(user.username);
- await db.ref("reels/"+id+"/likes").set(arr);
-}
-
-/* TAKEDOWN FOR REELS */
-async function requestTakedownReel(id){
- const reason=prompt("Reason?");
- if(!reason)return;
- const tid=now().toString();
- await db.ref("takedowns/"+tid).set({id:tid,reelId:id,from:user.username,reason,time:now(),handled:false});
-}
-
-/* FEED TAKEDOWN */
-async function requestTakedown(id){
- const reason=prompt("Reason?");
- if(!reason)return;
- const tid=now().toString();
- await db.ref("takedowns/"+tid).set({id:tid,postId:id,from:user.username,reason,time:now(),handled:false});
-}
-
-/* TAKEDOWN PANEL */
-function renderTakedownPanel(){
- if(user.role!==ROLE.FULL)return;
- takedownPanel.innerHTML="<h4>Takedowns</h4>";
- db.ref("takedowns").once("value").then(s=>{
-  const v=s.val()||{};
-  if(!Object.keys(v).length)return takedownPanel.innerHTML+="<div>No requests</div>";
-  Object.values(v).forEach(t=>{
-   takedownPanel.innerHTML+=`
-    <div style="padding:8px;border-top:1px solid #123">
-      <div><b>${escapeHtml(t.from)}</b> wants takedown</div>
-      <div>${escapeHtml(t.reason)}</div>
-      <div style="margin-top:6px">
-        <button class="btn" onclick="approveTD('${t.id}')">Approve</button>
-        <button class="btn" onclick="denyTD('${t.id}')">Deny</button>
-      </div>
-    </div>`;
-  });
- });
-}
-async function approveTD(id){
- const td=(await db.ref("takedowns/"+id).once("value")).val();
- if(td.postId) await db.ref("posts/"+td.postId).remove();
- if(td.reelId) await db.ref("reels/"+td.reelId).remove();
- await db.ref("takedowns/"+id).remove();
-}
-async function denyTD(id){await db.ref("takedowns/"+id).remove();}
-
-/* PROFILE */
-function renderProfile(){
- if(!user)return;
- const p=profileCard;
- const postCount=Object.values(allPosts).filter(x=>x.user===user.username).length;
- const reelCount=Object.values(allReels).filter(x=>x.user===user.username).length;
- p.innerHTML=`
-  <div style="display:flex;gap:10px;align-items:center">
-   <div class="pfp" style="width:60px;height:60px;font-size:26px">${user.username[0].toUpperCase()}</div>
-   <div>
-     <div style="font-weight:800;font-size:18px">@${escapeHtml(user.username)}</div>
-     <div class="small">${escapeHtml(user.bio||"")}</div>
-   </div>
-  </div>
-  <div style="margin-top:12px;display:flex;gap:12px">
-    <div class="small">Posts: ${postCount}</div>
-    <div class="small">Reels: ${reelCount}</div>
-    <div class="small">Followers: ${(user.followers||[]).length}</div>
-    <div class="small">Following: ${(user.following||[]).length}</div>
-  </div>`;
-}
-
-/* CHAT */
-function renderChatList(){
- const box=chatList; box.innerHTML="";
- Object.keys(allUsers).filter(u=>u!==user.username).forEach(u=>{
-  const mine=(user.following||[]).includes(u);
-  const theirs=(allUsers[u]?.following||[]).includes(user.username);
-  const can=(user.username==="alexmaxxing")||(mine&&theirs);
-  const d=document.createElement("div");
-  d.className="chat-item";
-  d.innerHTML=`
-    <div class="pfp" style="width:32px;height:32px;font-size:14px">${u[0].toUpperCase()}</div>
-    <div><b>${escapeHtml(u)}</b><div class="small">${can?"can chat":"mutual needed"}</div></div>`;
-  d.onclick=()=>{ if(!can)return alert("Mutual follow required"); chatWith=u; renderChat(); };
-  box.appendChild(d);
- });
-}
-function renderChat(){
- const h=chatHeader,box=chatBox; box.innerHTML="";
- if(!chatWith){h.textContent="Select conversation";return;}
- h.textContent="@"+chatWith;
- const msgs=Object.values(allMsgs).filter(m=>(m.from===user.username&&m.to===chatWith)||(m.from===chatWith&&m.to===user.username)).sort((a,b)=>a.time-b.time);
- msgs.forEach(m=>{
-  const d=document.createElement("div");
-  d.className=(m.from===user.username)?"msg me":"msg them";
-  d.textContent=m.text;
-  box.appendChild(d);
- });
- box.scrollTop=box.scrollHeight;
-}
-async function sendMessage(){
- if(!chatWith)return;
- const t=msgInput.value.trim(); if(!t)return;
- const id=now().toString();
- await db.ref("messages/"+id).set({id,from:user.username,to:chatWith,text:t,time:now()});
- msgInput.value="";
-}
-
-/* ADMIN BAR */
-function updateAdminBar(){
- adminBar.style.display=(user&&(user.role===ROLE.ADMIN||user.role===ROLE.FULL))?"block":"none";
+async function login(){
+  const username = document.getElementById('li_user').value.trim();
+  const pass = document.getElementById('li_pass').value;
+  if(!username || !pass){ alert('username & password required'); return; }
+  const snap = await db.ref('users/' + username).once('value');
+  if(!snap.exists()){ alert('user not found'); return; }
+  const data = snap.val();
+  if(data.password !== md5v(pass)){ alert('wrong password'); return; }
+  localStorage.setItem('sv_user', JSON.stringify(data));
+  window.location.href = 'home.html';
 }
 </script>
-
 </body>
 </html>
