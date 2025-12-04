@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SpaceVibe by AlexNET | Takedowns</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<style>
+:root{--bg:#071426;--accent:#00d9ff;--muted:#9fbfd6}
+body{margin:0;background:var(--bg);color:white;font-family:Inter}
+.top{background:#08192f;padding:12px;display:flex;justify-content:space-between}
+.brand{color:var(--accent);font-weight:800}
+.wrap{padding:14px;max-width:700px;margin:auto}
+.card{background:#0c1a2f;padding:14px;border-radius:12px;margin-top:14px}
+.btn{background:var(--accent);color:#012328;padding:8px 12px;border:none;border-radius:8px;font-weight:900;margin-top:10px;cursor:pointer}
+.small{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<script>
+if(!localStorage.getItem("sv_user"))location.href="index.html";
+</script>
+
+<div class="top">
+  <div class="brand">Takedown Queue</div>
+  <a href="home.html" style="color:var(--accent);font-weight:700">Home</a>
+</div>
+
+<div class="wrap" id="list">Loading...</div>
+
+<script>
+/* firebase init */
+const cfg={apiKey:"AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",authDomain:"spacevibe-backend.firebaseapp.com",databaseURL:"https://spacevibe-backend-default-rtdb.firebaseio.com",projectId:"spacevibe-backend",storageBucket:"spacevibe-backend.firebasestorage.app",messagingSenderId:"258209625594",appId:"1:258209625594:web:a21c48b7e7100462012043"};
+firebase.initializeApp(cfg);
+const db=firebase.database();
+
+let user=JSON.parse(localStorage.getItem("sv_user"));
+
+if(user.role!=="full-admin"){
+  alert("You must be full-admin.");
+  location.href="home.html";
+}
+
+/* load takedown requests */
+db.ref("takedowns").on("value",s=>{
+  const t=s.val()||{};
+  list.innerHTML="";
+  Object.values(t).forEach(x=>{
+    let d=document.createElement("div");
+    d.className="card";
+    d.innerHTML=`
+      <div><b>Type:</b> ${x.type}</div>
+      <div><b>ID:</b> ${x.id}</div>
+      <div><b>Reason:</b> ${x.reason}</div>
+      <div><b>Requested By:</b> @${x.by}</div>
+      <button class="btn" onclick="approve('${x.id}','${x.type}')">Approve</button>
+    `;
+    list.appendChild(d);
+  });
+});
+
+/* approve takedown */
+function approve(id,type){
+  if(type==="post") db.ref("posts/"+id).remove();
+  if(type==="reel") db.ref("reels/"+id).remove();
+  db.ref("takedowns/"+id).remove();
+  alert("Removed.");
+}
+</script>
+
+</body>
+</html>
