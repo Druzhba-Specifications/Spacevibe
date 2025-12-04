@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SpaceVibe by AlexNET | Admin</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<style>
+:root{--bg:#071426;--accent:#00d9ff;--muted:#9fbfd6}
+body{margin:0;background:var(--bg);color:#e6f7ff;font-family:Inter}
+.top{display:flex;justify-content:space-between;align-items:center;padding:12px;background:linear-gradient(180deg,#071725,#08192f)}
+.brand{color:var(--accent);font-weight:800}
+.wrap{max-width:800px;margin:20px auto;padding:12px}
+.card{background:linear-gradient(180deg,#071725,#08192f);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);margin-bottom:14px}
+input,select{width:100%;padding:10px;border-radius:8px;margin-top:10px;background:#071426;color:#e6f7ff;border:1px solid rgba(255,255,255,0.04)}
+.small{color:var(--muted);font-size:13px}
+.userRow{padding:10px;border-radius:8px;background:#0c1a2f;margin-top:8px}
+.btn{background:var(--accent);color:#012328;padding:8px 12px;border:none;border-radius:8px;font-weight:800;cursor:pointer;margin-top:6px}
+</style>
+</head>
+<body>
+
+<script>
+if(!localStorage.getItem('sv_user'))location.href='index.html';
+</script>
+
+<div class="top">
+  <div class="brand">SpaceVibe Admin</div>
+  <a href="home.html" style="color:var(--accent);text-decoration:none;font-weight:700">Home</a>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <h3>Admin Controls</h3>
+    <div class="small">Manage users, roles, and verification.</div>
+    <input id="searchBox" placeholder="Search username..." oninput="renderList()">
+  </div>
+
+  <div class="card" id="userList">Loading...</div>
+</div>
+
+<script>
+/* firebase */
+const firebaseConfig={apiKey:"AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",authDomain:"spacevibe-backend.firebaseapp.com",databaseURL:"https://spacevibe-backend-default-rtdb.firebaseio.com",projectId:"spacevibe-backend",storageBucket:"spacevibe-backend.firebasestorage.app",messagingSenderId:"258209625594",appId:"1:258209625594:web:a21c48b7e7100462012043"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+let user=JSON.parse(localStorage.getItem('sv_user'));
+let users={};
+
+/* protect admin */
+if(user.role!=="admin"&&user.role!=="full-admin"){
+  alert("You are not an admin");
+  location.href="home.html";
+}
+
+/* load users */
+db.ref("users").on("value",s=>{
+  users=s.val()||{};
+  renderList();
+});
+
+function renderList(){
+  let q=searchBox.value.toLowerCase();
+  userList.innerHTML="";
+  Object.values(users)
+    .filter(u=>u.username.toLowerCase().includes(q))
+    .forEach(u=>{
+      const div=document.createElement("div");
+      div.className="userRow";
+      div.innerHTML=`
+        <b>@${u.username}</b>
+        <div class="small">Role: ${u.role}</div>
+        <select onchange="setRole('${u.username}',this.value)">
+          <option value="regular"${u.role==="regular"?" selected":""}>Regular</option>
+          <option value="certified"${u.role==="certified"?" selected":""}>Certified</option>
+          <option value="admin"${u.role==="admin"?" selected":""}>Admin</option>
+          <option value="full-admin"${u.role==="full-admin"?" selected":""}>Full Admin</option>
+        </select>
+      `;
+      userList.appendChild(div);
+    });
+}
+
+function setRole(name,role){
+  const cert=(role==="certified"||role==="admin"||role==="full-admin");
+  db.ref("users/"+name+"/role").set(role);
+  db.ref("users/"+name+"/certified").set(cert);
+}
+</script>
+</body>
+</html>
