@@ -1,146 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SpaceVibe by AlexNET | Feed</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SpaceVibe by AlexNET | Feed</title>
 
-  <!-- md5 + firebase -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-  <style>
-    :root{--bg:#071426;--card:#0e1726;--accent:#00d9ff;--muted:#9fbfd6}
-    body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:#e6f7ff}
-    .top{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid rgba(255,255,255,0.04);background:linear-gradient(180deg,#071725,#08192f)}
-    .brand{color:var(--accent);font-weight:800}
-    .wrap{max-width:1000px;margin:18px auto;padding:12px}
-    .composer{background:linear-gradient(180deg,#071725,#08192f);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
-    input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;margin-top:8px}
-    .btn{background:var(--accent);color:#012328;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
-    .post{background:linear-gradient(180deg,#071725,#071427);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);margin-top:12px}
-    .postHeader{display:flex;gap:12px;align-items:center}
-    .pfp{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#00d9ff,#6a7cff);display:flex;align-items:center;justify-content:center;font-weight:900}
-    .small{color:var(--muted);font-size:13px}
-    .actions{display:flex;gap:8px;margin-top:8px}
-    .actionBtn{background:transparent;border:none;color:var(--muted);cursor:pointer}
-    .comment{background:#071726;padding:8px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,255,255,0.02)}
-  </style>
+<style>
+:root{--bg:#071426;--accent:#00d9ff}
+body{margin:0;background:var(--bg);color:white;font-family:Inter}
+.top{background:#08192f;padding:12px;display:flex;justify-content:space-between}
+.brand{color:var(--accent);font-weight:800}
+.wrap{padding:14px}
+.card{background:#0c1a2f;padding:14px;border-radius:12px;margin-bottom:18px}
+.postHead{display:flex;align-items:center;gap:10px}
+.pfp{width:48px;height:48px;border-radius:50%;border:2px solid var(--accent);cursor:pointer;object-fit:cover}
+.username{cursor:pointer;color:var(--accent);font-weight:700}
+.btn{background:var(--accent);border:none;color:#012328;border-radius:7px;padding:8px 10px;font-weight:800;cursor:pointer;margin-top:8px}
+</style>
 </head>
 <body>
-  <script>
-    // redirect to index if not signed in
-    (function(){
-      const s = localStorage.getItem('sv_user');
-      if(!s){ window.location.href = 'index.html'; return; } 
-    })();
-  </script>
-
-  <div class="top">
-    <div class="brand">SpaceVibe by AlexNET</div>
-    <div><a style="color:var(--accent);text-decoration:none;font-weight:700" href="home.html">Home</a></div>
-  </div>
-
-  <div class="wrap">
-    <div class="composer">
-      <textarea id="postText" rows="3" placeholder="Share a post..."></textarea>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn" onclick="createPost()">Post</button>
-        <button class="btn" onclick="goHome()">Back</button>
-      </div>
-    </div>
-
-    <div id="posts" style="margin-top:12px"></div>
-  </div>
 
 <script>
-/* firebase init */
-const firebaseConfig = {
-  apiKey: "AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
-  authDomain: "spacevibe-backend.firebaseapp.com",
-  databaseURL: "https://spacevibe-backend-default-rtdb.firebaseio.com",
-  projectId: "spacevibe-backend",
-  storageBucket: "spacevibe-backend.firebasestorage.app",
-  messagingSenderId: "258209625594",
-  appId: "1:258209625594:web:a21c48b7e7100462012043"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+if(!localStorage.getItem("sv_user"))location.href="index.html";
+</script>
 
-/* helpers */
-function md5v(s){ try{ return md5(String(s||"")) }catch(e){ return String(s||"") } }
-function now(){ return Date.now() }
-function esc(s){ return String(s||"").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+<div class="top">
+  <div class="brand">Feed</div>
+  <a href="home.html" style="color:var(--accent);font-weight:700">Home</a>
+</div>
 
-/* session */
-let user = JSON.parse(localStorage.getItem('sv_user') || 'null');
-if(!user) { window.location.href='index.html'; throw 'redirect'; }
+<div class="wrap" id="feed">Loading...</div>
 
-/* realtime listeners */
-db.ref('posts').on('value',snap=>{ renderPosts(snap.val()||{}) });
-db.ref('users').on('value',snap=>{ /* keep user fresh */ const u = snap.val() && snap.val()[user.username]; if(u){ user = u; localStorage.setItem('sv_user', JSON.stringify(user)); } });
+<script>
+/* firebase */
+const cfg={apiKey:"AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",authDomain:"spacevibe-backend.firebaseapp.com",databaseURL:"https://spacevibe-backend-default-rtdb.firebaseio.com",projectId:"spacevibe-backend",storageBucket:"spacevibe-backend.firebasestorage.app",messagingSenderId:"258209625594",appId:"1:258209625594:web:a21c48b7e7100462012043"};
+firebase.initializeApp(cfg);
+const db=firebase.database();
 
-/* create post */
-function createPost(){ const text = document.getElementById('postText').value.trim(); if(!text) return alert('enter text'); const id = now().toString(); const post = { id, user: user.username, text, likes: [], shares: 0, time: now(), comments: {} }; db.ref('posts/'+id).set(post); document.getElementById('postText').value=''; }
+let me=JSON.parse(localStorage.getItem("sv_user"));
 
-/* render posts */
-function renderPosts(list){
-  const root = document.getElementById('posts'); root.innerHTML = '';
-  const arr = Object.values(list).sort((a,b)=>b.time - a.time);
-  arr.forEach(p=>{
-    const el = document.createElement('div'); el.className='post';
-    const liked = (p.likes||[]).includes(user.username);
-    el.innerHTML = `<div class="postHeader"><div class="pfp">${esc(p.user[0]||'U')}</div><div><div style="font-weight:800">${esc(p.user)}</div><div class="small">${new Date(p.time).toLocaleString()}</div></div></div>
-      <div style="margin-top:8px">${esc(p.text)}</div>
-      <div class="actions">
-        <button class="actionBtn" onclick="toggleLike('${p.id}')">${liked? '♥' : '♡'} ${(p.likes||[]).length}</button>
-        <button class="actionBtn" onclick="openComment('${p.id}')">💬 ${(p.comments?Object.keys(p.comments).length:0)}</button>
-        ${(user.role==='admin'||user.role==='full-admin')?`<button class="actionBtn" onclick="requestTakedown('${p.id}')">🚫 takedown</button>`:''}
+/* load posts */
+db.ref("posts").on("value",s=>{
+  feed.innerHTML="";
+  const p=s.val()||{};
+  Object.values(p).sort((a,b)=>b.time-a.time).forEach(post=>{
+    let div=document.createElement("div");
+    div.className="card";
+    div.innerHTML=`
+      <div class="postHead">
+        <img class="pfp" src="${post.pfp||'https://via.placeholder.com/100'}" onclick="location.href='user.html?u=${post.user}'">
+        <div class="username" onclick="location.href='user.html?u=${post.user}'">@${post.user}</div>
       </div>
-      <div id="comments-${p.id}"></div>
-      <div id="cbox-${p.id}" style="display:none;margin-top:8px"><input id="cinput-${p.id}" placeholder="Comment..." style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)"><div style="margin-top:6px"><button class="btn" onclick="submitComment('${p.id}')">Comment</button></div></div>`;
-    root.appendChild(el);
-    renderComments(p);
+      <div style="margin-top:10px">${post.text}</div>
+      <div style="margin-top:10px;font-size:12px;opacity:0.7">${new Date(post.time).toLocaleString()}</div>
+      ${ (me.role==='admin'||me.role==='full-admin') ? `<button class="btn" onclick="requestTakedown('${post.id}','post')">Request Takedown</button>` : '' }
+    `;
+    feed.appendChild(div);
   });
-}
+});
 
-/* toggle like */
-function toggleLike(id){
-  db.ref('posts/'+id+'/likes').once('value').then(snap=>{
-    let arr = snap.val() || []; if(!Array.isArray(arr)) arr = Object.values(arr);
-    const i = arr.indexOf(user.username);
-    if(i>-1) arr.splice(i,1); else arr.push(user.username);
-    db.ref('posts/'+id+'/likes').set(arr);
-  });
-}
-
-/* comments UI */
-function openComment(id){ const box = document.getElementById('cbox-'+id); box.style.display = box.style.display === 'block' ? 'none' : 'block'; }
-function submitComment(id){
-  const input = document.getElementById('cinput-'+id); const txt = input.value.trim(); if(!txt) return alert('enter comment');
-  const cid = now().toString(); db.ref('posts/'+id+'/comments/'+cid).set({id:cid,by:user.username,text:txt,time:now()}); input.value='';
-}
-
-/* render comments below each post */
-function renderComments(p){
-  const area = document.getElementById('comments-'+p.id); if(!area) return;
-  area.innerHTML = '';
-  const comments = p.comments || {};
-  Object.keys(comments).sort((a,b)=>comments[a].time - comments[b].time).forEach(k=>{
-    const c = comments[k];
-    const d = document.createElement('div'); d.className = 'comment'; d.innerHTML = `<div class="small"><b>@${esc(c.by)}</b> • ${new Date(c.time).toLocaleString()}</div><div>${esc(c.text)}</div>`;
-    area.appendChild(d);
-  });
-}
-
-/* simple nav */
-function goHome(){ window.location.href = 'home.html' }
-
-/* takedown request (user) */
-function requestTakedown(postId){
-  const reason = prompt('Reason for takedown:'); if(!reason) return;
-  const id = now().toString(); db.ref('takedowns/' + id).set({ id, type: 'post', postId, from: user.username, reason, time: now() });
-  alert('Takedown requested');
+/* request takedown */
+function requestTakedown(id,type){
+  const reason=prompt("Reason for removal?");
+  if(!reason)return;
+  db.ref("takedowns/"+id).set({id,type,reason,by:me.username});
+  alert("Request sent to full-admins.");
 }
 </script>
 </body>
