@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SpaceVibe by AlexNET | Messages</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<style>
+:root{--bg:#071426;--accent:#00d9ff;--muted:#9fbfd6}
+body{margin:0;background:var(--bg);color:#e6f7ff;font-family:Inter}
+.top{display:flex;justify-content:space-between;align-items:center;padding:12px;background:linear-gradient(180deg,#071725,#08192f)}
+.brand{color:var(--accent);font-weight:800}
+.wrap{max-width:900px;margin:20px auto;padding:12px;display:grid;grid-template-columns:260px 1fr;gap:18px}
+.card{background:linear-gradient(180deg,#071725,#08192f);border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.03)}
+.chatItem{padding:10px;border-radius:8px;cursor:pointer;background:#0c1a2f;margin-bottom:6px;border:1px solid rgba(255,255,255,0.02)}
+.chatItem:hover{background:#0f2038}
+.msgBox{height:70vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;background:#0b1628;padding:12px;border-radius:10px}
+.msg{padding:8px 12px;border-radius:8px;max-width:75%}
+.me{background:var(--accent);color:#012328;align-self:flex-end}
+.them{background:#071726;border:1px solid rgba(255,255,255,0.02);align-self:flex-start}
+input{width:100%;padding:10px;border-radius:8px;margin-top:10px;background:#071426;color:#e6f7ff;border:1px solid rgba(255,255,255,0.03)}
+.btn{background:var(--accent);color:#012328;padding:10px;border:none;border-radius:8px;font-weight:800;margin-top:6px;cursor:pointer}
+.small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<script>
+if(!localStorage.getItem('sv_user'))location.href='index.html'
+</script>
+
+<div class="top">
+  <div class="brand">SpaceVibe by AlexNET</div>
+  <a href="home.html" style="color:var(--accent);text-decoration:none;font-weight:700">Home</a>
+</div>
+
+<div class="wrap">
+  <div class="card" id="chatList">Loading...</div>
+
+  <div>
+    <div class="card msgBox" id="msgs">Select a chat</div>
+    <input id="msgInput" placeholder="Message..."/>
+    <button class="btn" onclick="sendMsg()">Send</button>
+  </div>
+</div>
+
+<script>
+/* firebase */
+const firebaseConfig={apiKey:"AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",authDomain:"spacevibe-backend.firebaseapp.com",databaseURL:"https://spacevibe-backend-default-rtdb.firebaseio.com",projectId:"spacevibe-backend",storageBucket:"spacevibe-backend.firebasestorage.app",messagingSenderId:"258209625594",appId:"1:258209625594:web:a21c48b7e7100462012043"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+let user=JSON.parse(localStorage.getItem('sv_user'));
+let allUsers={},allMsgs={},active=null;
+
+/* load users + messages */
+db.ref("users").on("value",s=>{allUsers=s.val()||{};renderList()});
+db.ref("messages").on("value",s=>{allMsgs=s.val()||{};renderMsgs()});
+
+/* render chat list */
+function renderList(){
+  chatList.innerHTML="";
+  Object.values(allUsers).forEach(u=>{
+    if(u.username===user.username)return;
+
+    // can chat if mutual follow OR user is alexmaxxing
+    let can=false;
+    if(user.username==="alexmaxxing") can=true;
+    else{
+      if(u.followers&&u.followers.includes(user.username)&&user.followers&&user.followers.includes(u.username)) can=true;
+    }
+    if(!can)return;
+
+    const div=document.createElement("div");
+    div.className="chatItem";
+    div.textContent="@"+u.username;
+    div.onclick=()=>{active=u.username;renderMsgs()};
+    chatList.appendChild(div);
+  });
+}
+
+/* render msgs */
+function renderMsgs(){
+  if(!active){msgs.innerHTML="Select a chat";return;}
+  msgs.innerHTML="";
+  const arr=Object.values(allMsgs).filter(m=>
+    (m.from===user.username&&m.to===active)||(m.from===active&&m.to===user.username)
+  ).sort((a,b)=>a.time-b.time);
+
+  arr.forEach(m=>{
+    const d=document.createElement("div");
+    d.className="msg "+(m.from===user.username?"me":"them");
+    d.textContent=m.text;
+    msgs.appendChild(d);
+  });
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+/* send msg */
+function sendMsg(){
+  if(!active)return alert("pick a chat");
+  const t=msgInput.value.trim();if(!t)return;
+  const id=Date.now();
+  db.ref("messages/"+id).set({from:user.username,to:active,text:t,time:id});
+  msgInput.value="";
+}
+</script>
+</body>
+</html>
