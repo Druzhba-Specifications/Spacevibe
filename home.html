@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SpaceVibe by AlexNET | Home</title>
+
+  <!-- md5 + firebase -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root{--bg:#071426;--card:#0e1726;--accent:#00d9ff;--muted:#9fbfd6}
+    body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:#e6f7ff;min-height:100vh}
+    .top{display:flex;justify-content:space-between;align-items:center;padding:14px;border-bottom:1px solid rgba(255,255,255,0.03);background:linear-gradient(180deg,#071725,#08192f)}
+    .brand{color:var(--accent);font-weight:800}
+    .wrap{max-width:1100px;margin:18px auto;padding:12px}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:18px}
+    .card{background:linear-gradient(180deg,#071725,#08192f);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.03)}
+    .bigbtn{display:flex;gap:8px;margin-top:10px}
+    .btn{background:var(--accent);color:#012328;padding:8px 12px;border-radius:8px;border:none;font-weight:800;cursor:pointer}
+    a.link{color:var(--accent);text-decoration:none;font-weight:700}
+    .small{color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <script>
+    // redirect to index if not signed in
+    (function(){
+      const s = localStorage.getItem('sv_user');
+      if(!s){ window.location.href = 'index.html'; return; } 
+      // else continue - load basic UI
+    })();
+  </script>
+
+  <div class="top">
+    <div class="brand">SpaceVibe by AlexNET</div>
+    <div>
+      <a class="link" href="feed.html">Feed</a> &nbsp; <a class="link" href="reels.html">Reels</a> &nbsp; <a class="link" href="messages.html">Messages</a> &nbsp; <a class="link" href="profile.html">Profile</a> &nbsp; <a class="link" href="settings.html">Settings</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h3>Welcome back</h3>
+          <div class="small" id="welcomeSub">Loading...</div>
+          <div class="bigbtn">
+            <button class="btn" onclick="go('feed.html')">Open Feed</button>
+            <button class="btn" onclick="go('reels.html')">Open Reels</button>
+            <button class="btn" onclick="go('profile.html')">My Profile</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h4>Quick Actions</h4>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn" onclick="go('feed.html')">New Post</button>
+            <button class="btn" onclick="go('reels.html')">Upload Reel</button>
+          </div>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card">
+          <h4>Your Info</h4>
+          <div id="sideProfile" style="margin-top:8px">Loading...</div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h4>Admin</h4>
+          <div class="small" id="adminArea">—</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+  /* firebase init */
+  const firebaseConfig = {
+    apiKey: "AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",
+    authDomain: "spacevibe-backend.firebaseapp.com",
+    databaseURL: "https://spacevibe-backend-default-rtdb.firebaseio.com",
+    projectId: "spacevibe-backend",
+    storageBucket: "spacevibe-backend.firebasestorage.app",
+    messagingSenderId: "258209625594",
+    appId: "1:258209625594:web:a21c48b7e7100462012043"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  /* simple bootstrap */
+  const session = JSON.parse(localStorage.getItem('sv_user') || 'null');
+  if(!session) { window.location.href = 'index.html'; }
+  let user = session;
+
+  /* load fresh user copy */
+  db.ref('users/' + user.username).once('value').then(snap=>{
+    if(snap.exists()) user = snap.val(), localStorage.setItem('sv_user', JSON.stringify(user));
+    document.getElementById('welcomeSub').textContent = 'Hello, @' + user.username;
+    document.getElementById('sideProfile').innerHTML = `<div style="display:flex;gap:8px;align-items:center"><div style="width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#00d9ff,#667eea);display:flex;align-items:center;justify-content:center;font-weight:800">${user.username[0].toUpperCase()}</div><div><div style="font-weight:800">@${user.username}</div><div class="small">${user.bio||''}</div></div></div>`;
+    document.getElementById('adminArea').textContent = (user.role==='full-admin' || user.role==='admin') ? 'You are an admin' : '—';
+    applyTheme(user.theme || 'neon-dark');
+  });
+
+  function go(href){ window.location.href = href; }
+
+  function applyTheme(name){
+    // minimal theme switch; full theme options implemented in settings page
+    if(name === 'neon-dark'){ document.documentElement.style.setProperty('--bg','#071426'); document.documentElement.style.setProperty('--accent','#00d9ff'); }
+    else if(name === 'dark'){ document.documentElement.style.setProperty('--bg','#0b1220'); document.documentElement.style.setProperty('--accent','#66b3ff'); }
+    else if(name === 'amoled'){ document.documentElement.style.setProperty('--bg','#000000'); document.documentElement.style.setProperty('--accent','#7aefff'); }
+    else if(name === 'light'){ document.documentElement.style.setProperty('--bg','#f5f7fa'); document.documentElement.style.setProperty('--accent','#0077cc'); document.body.style.color = '#071426'; }
+  }
+</script>
+</body>
+</html>
