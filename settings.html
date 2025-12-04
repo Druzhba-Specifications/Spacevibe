@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SpaceVibe by AlexNET | Settings</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<style>
+:root{--bg:#071426;--accent:#00d9ff;--muted:#9fbfd6}
+body{margin:0;background:var(--bg);color:#e6f7ff;font-family:Inter}
+.top{display:flex;justify-content:space-between;align-items:center;padding:12px;background:linear-gradient(180deg,#071725,#08192f)}
+.brand{color:var(--accent);font-weight:800}
+.wrap{max-width:600px;margin:20px auto;padding:12px}
+.card{background:linear-gradient(180deg,#071725,#08192f);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);margin-bottom:14px}
+input,select{width:100%;padding:10px;border-radius:8px;margin-top:10px;background:#071426;color:#e6f7ff;border:1px solid rgba(255,255,255,0.04)}
+.btn{background:var(--accent);color:#012328;padding:10px 12px;border:none;border-radius:8px;font-weight:800;margin-top:10px;cursor:pointer}
+.bigDanger{background:#ff0033;color:white;font-weight:900;margin-top:20px}
+.small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<script>
+if(!localStorage.getItem('sv_user'))location.href='index.html'
+</script>
+
+<div class="top">
+  <div class="brand">SpaceVibe by AlexNET</div>
+  <a href="home.html" style="color:var(--accent);text-decoration:none;font-weight:700">Home</a>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <h3>Theme</h3>
+    <div class="small">Choose how SpaceVibe looks</div>
+
+    <select id="themeSelect">
+      <option value="neon-dark">Neon Dark Pro</option>
+      <option value="dark">Normal Dark</option>
+      <option value="amoled">AMOLED Black</option>
+      <option value="light">Light Mode</option>
+    </select>
+
+    <button class="btn" onclick="saveTheme()">Save Theme</button>
+  </div>
+
+  <div class="card">
+    <h3>Profile Picture</h3>
+    <div class="small">Use an image URL (web link)</div>
+    <input id="pfpURL" placeholder="https://example.com/image.png">
+    <button class="btn" onclick="savePFP()">Update PFP</button>
+  </div>
+
+  <div class="card">
+    <h3>Delete Account</h3>
+    <div class="small">This cannot be undone.</div>
+    <button class="btn bigDanger" onclick="deleteAccount()">Delete My Account</button>
+  </div>
+
+</div>
+
+<script>
+/* firebase init */
+const firebaseConfig={apiKey:"AIzaSyCdJEX1GYr5ji2_uBR49oJ6z6WDC1cCY_Q",authDomain:"spacevibe-backend.firebaseapp.com",databaseURL:"https://spacevibe-backend-default-rtdb.firebaseio.com",projectId:"spacevibe-backend",storageBucket:"spacevibe-backend.firebasestorage.app",messagingSenderId:"258209625594",appId:"1:258209625594:web:a21c48b7e7100462012043"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+let user=JSON.parse(localStorage.getItem('sv_user'));
+
+/* load saved theme */
+themeSelect.value=user.theme||"neon-dark";
+
+/* save theme */
+function saveTheme(){
+  const t=themeSelect.value;
+  db.ref("users/"+user.username+"/theme").set(t);
+  user.theme=t;
+  localStorage.setItem("sv_user",JSON.stringify(user));
+  alert("Theme saved!");
+}
+
+/* save pfp */
+function savePFP(){
+  const url=document.getElementById("pfpURL").value.trim();
+  if(!url)return alert("Enter URL");
+  db.ref("users/"+user.username+"/pfp").set(url);
+  user.pfp=url;
+  localStorage.setItem("sv_user",JSON.stringify(user));
+  alert("Profile picture updated");
+}
+
+/* delete account */
+function deleteAccount(){
+  if(!confirm("Are you sure you want to delete your account?"))return;
+  if(!confirm("This CANNOT be undone. Delete permanently?"))return;
+
+  db.ref("users/"+user.username).remove().then(()=>{
+    // remove posts
+    db.ref("posts").once("value").then(s=>{
+      Object.values(s.val()||{}).forEach(p=>{
+        if(p.user===user.username) db.ref("posts/"+p.id).remove();
+      });
+    });
+    // remove reels
+    db.ref("reels").once("value").then(s=>{
+      Object.values(s.val()||{}).forEach(r=>{
+        if(r.by===user.username) db.ref("reels/"+r.id).remove();
+      });
+    });
+    // remove messages
+    db.ref("messages").once("value").then(s=>{
+      Object.values(s.val()||{}).forEach(m=>{
+        if(m.from===user.username||m.to===user.username)
+          db.ref("messages/"+m.time).remove();
+      });
+    });
+
+    localStorage.removeItem("sv_user");
+    alert("Account deleted");
+    location.href="index.html";
+  });
+}
+</script>
+</body>
+</html>
